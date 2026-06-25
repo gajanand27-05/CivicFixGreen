@@ -1,0 +1,19 @@
+{
+  "name": "civicfix-pwa",
+  "version": "1.0.0",
+  "description": "CivicFix community issue reporting and resolution platform PWA.",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx -y http-server -p 8080 -c-1",
+    "start": "npx -y http-server -p 8080 -c-1"
+  },
+  "keywords": [
+    "pwa",
+    "civic",
+    "google-maps",
+    "gemini",
+    "gemma"
+  ],
+  "author": "Antigravity",
+  "license": "ISC"
+}

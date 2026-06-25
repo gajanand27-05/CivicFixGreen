@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563EB" />
+      <stop offset="100%" stop-color="#1D4ED8" />
+    </linearGradient>
+    <linearGradient id="pinGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6" />
+      <stop offset="100%" stop-color="#1D4ED8" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <!-- Background for maskable icon compliance -->
+  <rect width="512" height="512" rx="96" fill="#111827" />
+  
+  <g transform="translate(0, -10)" filter="url(#shadow)">
+    <!-- Location Pin outer -->
+    <path d="M256,64 C160,64 80,144 80,240 C80,360 224,448 256,448 C288,448 432,360 432,240 C432,144 352,64 256,64 Z" fill="url(#pinGrad)" />
+    <!-- White Inner Circle -->
+    <circle cx="256" cy="240" r="100" fill="#FFFFFF" />
+    <!-- Checkmark Inside Circle -->
+    <path d="M208,248 L238,278 L304,200" fill="none" stroke="#1A56DB" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+</svg>
