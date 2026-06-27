@@ -1,0 +1,11 @@
+.git
+.gitignore
+.dockerignore
+node_modules
+.gemini
+antigravity-ide
+walkthrough.md
+implementation_plan.md
+task.md
+Dockerfile
+package-lock.json
