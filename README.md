@@ -2,7 +2,9 @@
 
 [![CivicFix AI Banner](assets/civicfix_logo_banner.png)](assets/civicfix_logo_banner.png)
 
-**CivicFix AI** is a state-of-the-art Progressive Web App (PWA) built to bridge the gap between citizens and municipal authorities. It enables community-driven civic issue reporting, automated verification, and transparent resolution tracking. 
+**CivicFix AI** is an AI-powered Progressive Web App that transforms how communities identify, report, validate, track, and resolve civic infrastructure issues. By combining Google's Gemini Vision, Gemma 4, and Google Maps with an Antigravity backend deployed on Google Cloud Run, CivicFix creates a transparent, gamified, and intelligent bridge between citizens and government authorities.
+
+The platform operates across three user roles — Citizens, Government Authorities, and Admins — with each role experiencing a purpose-built interface that makes civic participation effortless and resolution accountable.
 
 By leveraging **Google AI Studio (Gemini 1.5 Flash models)** for image classification, voice transcription, and fix validation, alongside a **unified Google Maps/Leaflet Map fallback engine**, CivicFix AI turns reporting potholes, streetlights, garbage, and leaks into a seamless, gamified community effort.
 
@@ -53,6 +55,7 @@ Here is a preview of the CivicFix AI citizen dashboard showing active reports, l
 
 ### 1. High-Level Architecture
 The diagram below details the interaction between the Frontend Single-Page App (SPA), the service worker cache, IndexedDB for offline data persistence, and external APIs (Google AI Studio and Maps SDK).
+<img width="501" height="554" alt="image" src="https://github.com/user-attachments/assets/6ea91e4e-61c7-4e46-8eb1-a1ed9c0c7015" />
 
 ```mermaid
 graph TD
