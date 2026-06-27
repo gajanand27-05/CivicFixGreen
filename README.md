@@ -138,7 +138,7 @@ npm install
 npm run dev
 ```
 
-The application will be served at `http://localhost:8080`.
+The application is delpoyed using google cloud & will be served at `https://civicfix-app-173117975458.us-central1.run.app`.
 
 ### Pre-seeded Accounts
 - **Admin:** `admin@civicfix.gov` / `admin123`
