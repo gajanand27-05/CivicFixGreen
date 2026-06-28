@@ -18,7 +18,8 @@ const AI = {
 
   // Helper to check if API key is active
   hasApiKey() {
-    return this.getApiKey().trim().length > 0;
+    const key = this.getApiKey().trim();
+    return key.length > 0 && key !== 'YOUR_GOOGLE_AI_STUDIO_KEY' && !key.startsWith('YOUR_');
   },
 
   // Helper to extract base64 data and mimeType from dataURL
@@ -116,24 +117,24 @@ const AI = {
   },
 
   // 2. Audio Transcription (Audio API)
-  async transcribeAudio(audioDataUrl) {
+  async transcribeAudio(audioDataUrl, category = '') {
     const prompt = `Transcribe this audio clip of a citizen describing a civic issue. Return a JSON object with a single field:
     transcription (plain text description, max 500 characters).`;
 
     if (!this.hasApiKey()) {
-      return this.mockTranscribe(audioDataUrl);
+      return this.mockTranscribe(audioDataUrl, category);
     }
 
     const parsed = this.parseDataUrl(audioDataUrl);
     if (!parsed) {
-      return this.mockTranscribe(audioDataUrl);
+      return this.mockTranscribe(audioDataUrl, category);
     }
 
     try {
       return await this.callAIStudio(prompt, [parsed], 'application/json');
     } catch (err) {
       console.warn('AI Studio call failed, falling back to mock.', err);
-      return this.mockTranscribe(audioDataUrl);
+      return this.mockTranscribe(audioDataUrl, category);
     }
   },
 
@@ -274,16 +275,24 @@ const AI = {
     };
   },
 
-  async mockTranscribe(audioDataUrl) {
+  async mockTranscribe(audioDataUrl, category = '') {
     await new Promise(resolve => setTimeout(resolve, 1000));
-    const transcriptions = [
-      "There is a huge pothole here right next to the school entrance, it's very risky for school buses when they take a turn.",
-      "The streetlight has been blinking and making a weird buzz noise for three days and now it is completely off.",
-      "Lots of plastic garbage accumulated here next to the main market, stray cows are eating it. Please clean it.",
-      "Water is leaking from the junction valve underneath the pavement, it has created a large puddle."
-    ];
+    
+    const categoryTranscriptions = {
+      pothole: "There is a massive pothole in the middle of the road here. It is about a foot deep and causes cars to swerve dangerously to avoid it.",
+      streetlight: "The streetlight here has been completely dead for over a week, making this entire corner extremely dark and unsafe for pedestrians at night.",
+      water_leakage: "There is water bubbling up from under the sidewalk. It seems like a main pipeline burst and it's flooding the walkway.",
+      garbage: "Someone dumped a huge pile of trash and plastic bags right next to the park entrance. Stray animals are scattering it everywhere.",
+      flooding: "The storm drain is completely clogged with leaves and debris, and the street is flooded up to the curb after the recent rain.",
+      road_damage: "The asphalt road surface is severely cracked and peeling away, making the drive very bumpy and damaging tires.",
+      vandalism: "The benches in the community park have been vandalized with spray paint, and one of them is broken.",
+      encroachment: "A commercial vendor has set up a large stall blocking the entire pedestrian sidewalk, forcing people to walk on the busy main road.",
+      other: "I noticed a public maintenance issue here that needs attention as soon as possible. Please send a crew to inspect it."
+    };
+
+    const transcript = categoryTranscriptions[category] || categoryTranscriptions['other'];
     return {
-      transcription: transcriptions[Math.floor(Math.random() * transcriptions.length)]
+      transcription: transcript
     };
   },
 

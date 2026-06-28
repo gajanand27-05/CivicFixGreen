@@ -123,6 +123,14 @@ const ProfilePage = {
               </label>
             </div>
 
+            <div class="preference-item" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 15px; margin-top: 15px; display: block;">
+              <div class="pref-desc" style="margin-bottom: 10px;">
+                <strong>Google AI Studio API Key</strong>
+                <p class="text-muted" style="font-size: 13px; margin-top: 4px;">Enter your Gemini API key to enable real-time image detection and voice transcription. Keys are saved locally in your browser.</p>
+              </div>
+              <input type="password" id="pref-ai-key" class="form-control" placeholder="Enter API Key (AIzaSy...)" style="width: 100%; max-width: 450px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 10px; color: #fff;">
+            </div>
+
             <button class="btn btn-primary mt-3" id="save-preferences-btn">Save Preferences</button>
           </div>
 
@@ -204,6 +212,12 @@ const ProfilePage = {
       Router.updateNavigationLayout(window.location.hash, Auth.getCurrentUser());
     });
 
+    // Load preferences
+    const aiKeyField = document.getElementById('pref-ai-key');
+    if (aiKeyField) {
+      aiKeyField.value = localStorage.getItem('civicfix_ai_studio_key') || '';
+    }
+
     // Save preferences
     const savePrefBtn = document.getElementById('save-preferences-btn');
     savePrefBtn.addEventListener('click', async () => {
@@ -211,6 +225,9 @@ const ProfilePage = {
         email: document.getElementById('pref-email-notif').checked,
         push: document.getElementById('pref-push-notif').checked
       };
+
+      const aiKeyVal = document.getElementById('pref-ai-key').value.trim();
+      localStorage.setItem('civicfix_ai_studio_key', aiKeyVal);
 
       await DB.put('users', user);
       await Auth.refreshUser();

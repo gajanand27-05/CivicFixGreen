@@ -66,6 +66,23 @@ const ReportPage = {
             <h2>Step 2: AI Classification</h2>
             <p class="text-muted">Our AI is analyzing your image to pre-fill details.</p>
             
+            <div class="simulation-selector-box" id="simulation-selector-box" style="display: none; margin-top: 15px;">
+              <div class="alert alert-info" style="background: rgba(26, 86, 219, 0.1); border: 1px solid rgba(26, 86, 219, 0.2); color: var(--primary-color);">
+                <i data-lucide="info" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 6px;"></i> <strong>Simulation Mode</strong>: Select the issue type in your photo to simulate AI auto-detection.
+              </div>
+              <div class="sim-category-grid">
+                <button class="sim-cat-btn" data-cat="pothole"><i data-lucide="layout-grid"></i> Pothole</button>
+                <button class="sim-cat-btn" data-cat="streetlight"><i data-lucide="lightbulb"></i> Streetlight</button>
+                <button class="sim-cat-btn" data-cat="water_leakage"><i data-lucide="droplet"></i> Water Leak</button>
+                <button class="sim-cat-btn" data-cat="garbage"><i data-lucide="trash-2"></i> Garbage</button>
+                <button class="sim-cat-btn" data-cat="flooding"><i data-lucide="waves"></i> Flooding</button>
+                <button class="sim-cat-btn" data-cat="road_damage"><i data-lucide="navigation-2"></i> Road Damage</button>
+                <button class="sim-cat-btn" data-cat="vandalism"><i data-lucide="dribbble"></i> Vandalism</button>
+                <button class="sim-cat-btn" data-cat="encroachment"><i data-lucide="store"></i> Encroachment</button>
+                <button class="sim-cat-btn" data-cat="other"><i data-lucide="help-circle"></i> Other</button>
+              </div>
+            </div>
+
             <div class="ai-scanning-overlay" id="ai-scanning-view" style="display: none;">
               <div class="scanning-image-box">
                 <img id="scanning-preview-img" src="" class="scanning-img">
@@ -261,7 +278,15 @@ const ReportPage = {
     for (let s = 1; s <= 5; s++) {
       const panel = document.getElementById(`step-${s}-panel`);
       if (panel) {
-        panel.style.display = s === this.currentStep ? 'block' : 'none';
+        if (s === this.currentStep) {
+          panel.style.display = 'block';
+          // Force layout reflow for CSS transitions
+          panel.offsetHeight;
+          panel.classList.add('active');
+        } else {
+          panel.style.display = 'none';
+          panel.classList.remove('active');
+        }
       }
     }
 
@@ -389,27 +414,95 @@ const ReportPage = {
 
     const scanView = document.getElementById('ai-scanning-view');
     const formView = document.getElementById('ai-results-form');
+    const simBox = document.getElementById('simulation-selector-box');
     const scanningImg = document.getElementById('scanning-preview-img');
 
-    scanView.style.display = 'block';
-    formView.style.display = 'none';
     scanningImg.src = this.mediaFiles[0].dataUrl;
 
-    try {
-      const suggestions = await AI.classifyIssue(this.mediaFiles[0].dataUrl, this.mediaFiles[0].name);
-      this.aiSuggestions = suggestions;
-      
-      // Populate fields
-      document.getElementById('report-title').value = suggestions.suggested_title;
-      document.getElementById('report-category').value = suggestions.category.trim();
-      document.getElementById('report-severity').value = suggestions.severity;
-      document.getElementById('report-dept').value = suggestions.department;
-
+    if (!AI.hasApiKey()) {
+      // Simulation mode: show selection helper
       scanView.style.display = 'none';
-      formView.style.display = 'block';
+      formView.style.display = 'none';
+      simBox.style.display = 'block';
 
-      // Set category listener to update department suggested
-      document.getElementById('report-category').addEventListener('change', (e) => {
+      // Setup click listeners for simulation buttons
+      const simBtns = simBox.querySelectorAll('.sim-cat-btn');
+      simBtns.forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        
+        newBtn.addEventListener('click', async () => {
+          const selectedCat = newBtn.getAttribute('data-cat');
+          simBox.style.display = 'none';
+          scanView.style.display = 'block';
+
+          // Simulate classification delay with scan laser
+          await new Promise(resolve => setTimeout(resolve, 1800));
+
+          // Load realistic classification results based on category
+          const categorySuggestions = {
+            pothole: { suggested_title: "Large Pothole Blocking Road Lane", severity: 3, department: "roads" },
+            streetlight: { suggested_title: "Broken Streetlight Causing Dark Street", severity: 2, department: "electricity" },
+            water_leakage: { suggested_title: "Water Pipeline Leakage on Walkway", severity: 3, department: "water" },
+            garbage: { suggested_title: "Overflowing Garbage Pile Near Residential Sector", severity: 3, department: "sanitation" },
+            flooding: { suggested_title: "Severe Street Flooding After Heavy Rains", severity: 4, department: "sanitation" },
+            road_damage: { suggested_title: "Major Asphalt Cracking and Road Damage", severity: 3, department: "roads" },
+            vandalism: { suggested_title: "Public Park Bench Vandalized with Paint", severity: 2, department: "municipality" },
+            encroachment: { suggested_title: "Sidewalk Encroachment by Street Vendors", severity: 3, department: "municipality" },
+            other: { suggested_title: "Reported Civic Hazard in the Neighborhood", severity: 2, department: "municipality" }
+          };
+
+          const suggestions = categorySuggestions[selectedCat] || categorySuggestions['other'];
+          this.aiSuggestions = {
+            category: selectedCat,
+            confidence_score: 0.95,
+            ...suggestions
+          };
+
+          // Populate fields
+          document.getElementById('report-title').value = this.aiSuggestions.suggested_title;
+          document.getElementById('report-category').value = selectedCat;
+          document.getElementById('report-severity').value = this.aiSuggestions.severity;
+          document.getElementById('report-dept').value = this.aiSuggestions.department;
+
+          scanView.style.display = 'none';
+          formView.style.display = 'block';
+          this.setupCategoryChangeListener();
+        });
+      });
+      if (window.lucide) window.lucide.createIcons();
+    } else {
+      // Real API mode
+      simBox.style.display = 'none';
+      scanView.style.display = 'block';
+      formView.style.display = 'none';
+
+      try {
+        const suggestions = await AI.classifyIssue(this.mediaFiles[0].dataUrl, this.mediaFiles[0].name);
+        this.aiSuggestions = suggestions;
+        
+        // Populate fields
+        document.getElementById('report-title').value = suggestions.suggested_title;
+        document.getElementById('report-category').value = suggestions.category.trim();
+        document.getElementById('report-severity').value = suggestions.severity;
+        document.getElementById('report-dept').value = suggestions.department;
+
+        scanView.style.display = 'none';
+        formView.style.display = 'block';
+        this.setupCategoryChangeListener();
+      } catch (err) {
+        console.error(err);
+        App.showToast('AI classification failure', 'Failed to scan image. Please input manually.', 'warning');
+        scanView.style.display = 'none';
+        formView.style.display = 'block';
+      }
+    }
+  },
+
+  setupCategoryChangeListener() {
+    const categorySelect = document.getElementById('report-category');
+    if (categorySelect) {
+      categorySelect.addEventListener('change', (e) => {
         const depts = {
           pothole: 'roads',
           streetlight: 'electricity',
@@ -421,14 +514,11 @@ const ReportPage = {
           encroachment: 'municipality',
           other: 'municipality'
         };
-        document.getElementById('report-dept').value = depts[e.target.value] || 'municipality';
+        const deptSelect = document.getElementById('report-dept');
+        if (deptSelect) {
+          deptSelect.value = depts[e.target.value] || 'municipality';
+        }
       });
-
-    } catch (err) {
-      console.error(err);
-      App.showToast('AI classification failure', 'Failed to scan image. Please input manually.', 'warning');
-      scanView.style.display = 'none';
-      formView.style.display = 'block';
     }
   },
 
@@ -631,29 +721,72 @@ const ReportPage = {
         recStatus.style.display = 'none';
         recordBtn.querySelector('span').innerText = 'Record Voice Note';
         const micIcon = recordBtn.querySelector('.mic-icon');
-        if (micIcon) micIcon.classList.remove('pulse-red');
+        if (micIcon) {
+          micIcon.classList.remove('pulse-red');
+          micIcon.style.animation = '';
+        }
 
         loader.style.display = 'block';
-        try {
-          const res = await AI.transcribeAudio('data:audio/webm;base64,mock');
-          const transcriptionText = (typeof res === 'string') ? res : (res.transcription || res.text || JSON.stringify(res));
-          descField.value = transcriptionText;
-          App.showToast('Voice Transcribed', 'Description filled from voice report.', 'success');
-        } catch (err) {
-          console.error(err);
-          App.showToast('Transcription Failed', 'Could not transcribe voice note.', 'warning');
-        } finally {
-          loader.style.display = 'none';
+        
+        const stopAndProcess = async (audioDataUrl) => {
+          try {
+            const category = document.getElementById('report-category')?.value || 'other';
+            const res = await AI.transcribeAudio(audioDataUrl, category);
+            const transcriptionText = (typeof res === 'string') ? res : (res.transcription || res.text || JSON.stringify(res));
+            descField.value = transcriptionText;
+            descField.dispatchEvent(new Event('input', { bubbles: true }));
+            App.showToast('Voice Transcribed', 'Description filled from voice report.', 'success');
+          } catch (err) {
+            console.error(err);
+            App.showToast('Transcription Failed', 'Could not transcribe voice note.', 'warning');
+          } finally {
+            loader.style.display = 'none';
+          }
+        };
+
+        if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+          this.mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              stopAndProcess(reader.result);
+            };
+            reader.readAsDataURL(audioBlob);
+          };
+          this.mediaRecorder.stop();
+          if (this.mediaRecorder.stream) {
+            this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+          }
+        } else {
+          stopAndProcess('data:audio/webm;base64,mock');
         }
       } else {
-        // Start recording simulation
+        // Start recording
         this.isRecordingAudio = true;
+        this.audioChunks = [];
         secondsElapsed = 0;
         timerText.innerText = '0:00';
         recStatus.style.display = 'block';
         recordBtn.querySelector('span').innerText = 'Stop & Transcribe';
         const micIcon = recordBtn.querySelector('.mic-icon');
-        if (micIcon) micIcon.classList.add('pulse-red');
+        if (micIcon) {
+          micIcon.classList.add('pulse-red');
+          micIcon.style.animation = 'micPulseAnimation 1.2s infinite alternate';
+        }
+
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          this.mediaRecorder = new MediaRecorder(stream);
+          this.mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) {
+              this.audioChunks.push(e.data);
+            }
+          };
+          this.mediaRecorder.start();
+        } catch (err) {
+          console.warn('Microphone access denied or unsupported, using simulation mode.', err);
+          this.mediaRecorder = null;
+        }
 
         timerInterval = setInterval(() => {
           secondsElapsed++;
