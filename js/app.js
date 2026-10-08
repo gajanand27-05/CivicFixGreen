@@ -20,12 +20,11 @@ const App = {
     // 2. Initialize Session
     Auth.init();
 
-    // 2.5. Programmatically clear old service worker caches to force immediate updates of dynamic files
     if ('caches' in window) {
       try {
         caches.keys().then(keys => {
           keys.forEach(key => {
-            if (key !== 'civicfix-cache-v3') {
+            if (key !== 'civicfix-cache-v5') {
               console.log('Clearing old cache to force update:', key);
               caches.delete(key);
             }
@@ -328,20 +327,44 @@ const App = {
     });
 
     // Dark Mode Toggle Listener
+    const updateThemeIcons = (isDark) => {
+      document.querySelectorAll('#theme-toggle-header i, #theme-toggle-mobile i').forEach(icon => {
+        icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+      });
+      if (window.lucide) window.lucide.createIcons();
+    };
+
     window.addEventListener('theme-changed', (e) => {
-      if (e.detail.theme === 'dark') {
+      const isDark = e.detail.theme === 'dark';
+      if (isDark) {
         document.documentElement.classList.add('dark');
       } else {
         document.documentElement.classList.remove('dark');
       }
+      updateThemeIcons(isDark);
     });
 
-    // Check system preference
-    if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    // Check saved or system preference
+    const isSavedDark = localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (isSavedDark) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
+    updateThemeIcons(isSavedDark);
+
+    // Theme toggle buttons click
+    const toggleTheme = () => {
+      const willBeDark = !document.documentElement.classList.contains('dark');
+      const newTheme = willBeDark ? 'dark' : 'light';
+      localStorage.setItem('theme', newTheme);
+      window.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme: newTheme } }));
+    };
+
+    const themeHeaderBtn = document.getElementById('theme-toggle-header');
+    const themeMobileBtn = document.getElementById('theme-toggle-mobile');
+    if (themeHeaderBtn) themeHeaderBtn.addEventListener('click', toggleTheme);
+    if (themeMobileBtn) themeMobileBtn.addEventListener('click', toggleTheme);
   },
 
   toggleNotificationsOverlay() {

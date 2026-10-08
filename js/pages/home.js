@@ -2,6 +2,7 @@
 // Home Feed and Issue Details
 
 const HomePage = {
+  isPublic: true,
   issues: [],
   currentFilter: 'all',
   currentSort: 'recent',
@@ -10,11 +11,70 @@ const HomePage = {
   async render() {
     return `
       <div class="feed-container">
+        <!-- Modern Web Hero Banner -->
+        <div class="home-hero-banner">
+          <div class="hero-badge"><i data-lucide="sparkles"></i> AI-Powered Civic Platform</div>
+          <h1 class="hero-title">Report, Track & Resolve Community Issues</h1>
+          <p class="hero-subtitle">CivicFix combines multimodal AI with transparent municipal workflows to fix potholes, broken streetlights, water leaks, and waste hazards in real-time.</p>
+          <div class="hero-actions">
+            <button class="btn btn-primary" onclick="Router.navigate('#/report')">
+              <i data-lucide="plus-circle"></i> Report an Issue
+            </button>
+            <button class="btn btn-outline" onclick="Router.navigate('#/map')">
+              <i data-lucide="map"></i> Explore Live Map
+            </button>
+            <button class="btn btn-secondary" onclick="Router.navigate('#/public')">
+              <i data-lucide="bar-chart-2"></i> Transparency Board
+            </button>
+          </div>
+          <div class="hero-stats-row">
+            <div class="hero-stat-item">
+              <span class="hero-stat-val" id="hero-stat-total">10+</span>
+              <span class="hero-stat-label">Reported Issues</span>
+            </div>
+            <div class="hero-stat-item">
+              <span class="hero-stat-val">94%</span>
+              <span class="hero-stat-label">AI Accuracy</span>
+            </div>
+            <div class="hero-stat-item">
+              <span class="hero-stat-val">26.4h</span>
+              <span class="hero-stat-label">Avg Response SLA</span>
+            </div>
+            <div class="hero-stat-item">
+              <span class="hero-stat-val" id="hero-stat-resolved">4</span>
+              <span class="hero-stat-label">Verified Fixes</span>
+            </div>
+          </div>
+        <!-- Live Municipal 311 Gateway Bar -->
+        <div class="live-govt-bar" style="background: linear-gradient(135deg, rgba(30, 58, 138, 0.08), rgba(14, 165, 233, 0.08)); border: 1px solid rgba(14, 165, 233, 0.25); border-radius: 14px; padding: 14px 20px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(14, 165, 233, 0.15); color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 22px;">
+              🏛️
+            </div>
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary, #0f172a);">Live Municipal 311 Open Data Gateway</span>
+                <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: rgba(16, 185, 129, 0.15); color: #059669; font-size: 0.72rem; font-weight: 700; text-transform: uppercase;">
+                  <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; display: inline-block;"></span> Live API Connected
+                </span>
+              </div>
+              <p style="margin: 2px 0 0; font-size: 0.8rem; color: var(--text-secondary, #64748b);">
+                Directly stream real-time citizen grievance tickets from official municipal Open311 / Socrata Open Data endpoints.
+              </p>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button id="sync-govt-tickets-btn" class="btn btn-primary" style="font-size: 0.82rem; padding: 8px 16px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);">
+              <i data-lucide="radio"></i> <span>Fetch Live Govt 311 Tickets</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Search & Filter Header -->
         <div class="feed-header">
           <div class="search-bar-container">
             <i data-lucide="search" class="search-icon"></i>
-            <input type="text" id="feed-search" placeholder="Search issues, category, ward..." class="search-input">
+            <input type="text" id="feed-search" placeholder="Search issues, category, ward, address..." class="search-input">
           </div>
           
           <div class="filter-sort-row">
@@ -85,6 +145,34 @@ const HomePage = {
       this.currentSort = e.target.value;
       this.renderList();
     });
+
+    // Live Govt 311 Sync Listener
+    const syncBtn = document.getElementById('sync-govt-tickets-btn');
+    if (syncBtn) {
+      syncBtn.addEventListener('click', async () => {
+        syncBtn.disabled = true;
+        const originalText = syncBtn.innerHTML;
+        syncBtn.innerHTML = `<i data-lucide="loader-2" class="spin"></i> Syncing Live 311...`;
+        if (window.lucide) window.lucide.createIcons();
+        
+        try {
+          if (window.GovtDataService) {
+            const res = await window.GovtDataService.syncGovtTicketsToDB(8);
+            App.showToast(`Fetched & ingested ${res.syncedCount} live municipal tickets!`, 'success');
+            await this.loadIssues();
+          } else {
+            App.showToast('Govt Data Service not loaded', 'error');
+          }
+        } catch (err) {
+          console.error('Govt sync failed:', err);
+          App.showToast('Failed to fetch live govt tickets', 'error');
+        } finally {
+          syncBtn.disabled = false;
+          syncBtn.innerHTML = originalText;
+          if (window.lucide) window.lucide.createIcons();
+        }
+      });
+    }
 
     // Listen for database updates (like upvote increments or status advances from polling)
     window.addEventListener('db-update', async () => {
@@ -162,13 +250,13 @@ const HomePage = {
       const isUpvoted = false; // We will check user's verification table upvotes
 
       let categoryIcon = 'help-circle';
-      if (issue.category === 'pothole') categoryIcon = 'drill';
+      if (issue.category === 'pothole') categoryIcon = 'alert-triangle';
       if (issue.category === 'streetlight') categoryIcon = 'lightbulb';
       if (issue.category === 'water_leakage') categoryIcon = 'droplets';
       if (issue.category === 'garbage') categoryIcon = 'trash-2';
       if (issue.category === 'flooding') categoryIcon = 'waves';
-      if (issue.category === 'road_damage') categoryIcon = 'construction';
-      if (issue.category === 'vandalism') categoryIcon = 'paint-brush';
+      if (issue.category === 'road_damage') categoryIcon = 'cone';
+      if (issue.category === 'vandalism') categoryIcon = 'palette';
       if (issue.category === 'encroachment') categoryIcon = 'store';
 
       return `
@@ -184,6 +272,11 @@ const HomePage = {
                 <i data-lucide="${categoryIcon}"></i>
                 ${issue.category.replace('_', ' ')}
               </span>
+              ${issue.is_govt_feed ? `
+                <span class="govt-badge" style="background: rgba(14, 165, 233, 0.12); color: #0284c7; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(14, 165, 233, 0.25);">
+                  <i data-lucide="building-2"></i> Govt 311: ${issue.govt_ticket_id || 'Verified'}
+                </span>
+              ` : ''}
               <span class="status-pill ${statusClass}">${issue.status.replace('_', ' ')}</span>
             </div>
             
@@ -221,6 +314,7 @@ const HomePage = {
   async upvoteIssue(issueId, btnElement) {
     const user = Auth.getCurrentUser();
     if (!user) {
+      App.showToast('Sign in required', 'Please sign in to upvote issues and earn rewards (+5 pts).', 'info');
       Router.navigate('#/login');
       return;
     }

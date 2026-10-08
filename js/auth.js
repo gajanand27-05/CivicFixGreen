@@ -6,9 +6,9 @@ const SESSION_KEY = 'civicfix_user_session';
 const Auth = {
   currentUser: null,
 
-  // Initialize Session from localStorage or sessionStorage
+  // Initialize Session from sessionStorage or localStorage
   init() {
-    const sessionStr = localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY);
+    const sessionStr = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
     if (sessionStr) {
       try {
         this.currentUser = JSON.parse(sessionStr);
@@ -65,12 +65,12 @@ const Auth = {
     return newUser;
   },
 
-  // Google OAuth Mock Sign-in
-  async googleSignIn() {
-    // Generate a mock google citizen user
-    const names = ['Arjun Patel', 'Deepa Sharma', 'Rahul Krishnan', 'Meera Rao', 'Siddharth Roy'];
-    const selectedName = names[Math.floor(Math.random() * names.length)];
-    const email = `${selectedName.toLowerCase().replace(' ', '.')}@gmail.com`;
+  // Google OAuth Sign-in Handler
+  async googleSignIn(accountData = null) {
+    const selectedName = accountData?.name || 'Alex Turner';
+    const email = accountData?.email || 'alex.turner@gmail.com';
+    const avatar = accountData?.avatar_url || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80`;
+    const defaultPoints = accountData?.points !== undefined ? accountData.points : 390;
 
     const users = await DB.getAll('users');
     let user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
@@ -81,12 +81,12 @@ const Auth = {
         name: selectedName,
         email,
         password_hash: 'google_oauth_bypass',
-        role: 'citizen',
+        role: accountData?.role || 'citizen',
         city: 'MetroCity',
         ward: 'Ward 4',
-        points: 0,
+        points: defaultPoints,
         google_oauth_id: 'g_' + Math.random().toString(36).substring(2, 11),
-        avatar_url: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(selectedName)}`,
+        avatar_url: avatar,
         created_at: new Date().toISOString(),
         notification_preferences: { email: true, push: true, digest: true }
       };
@@ -101,12 +101,12 @@ const Auth = {
   setCurrentUser(user, rememberMe = false) {
     this.currentUser = user;
     const sessionStr = JSON.stringify(user);
+    localStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(SESSION_KEY);
     if (rememberMe) {
       localStorage.setItem(SESSION_KEY, sessionStr);
-      sessionStorage.removeItem(SESSION_KEY);
     } else {
       sessionStorage.setItem(SESSION_KEY, sessionStr);
-      localStorage.removeItem(SESSION_KEY);
     }
   },
 

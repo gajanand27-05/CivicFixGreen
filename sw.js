@@ -1,4 +1,4 @@
-const CACHE_NAME = 'civicfix-cache-v3';
+const CACHE_NAME = 'civicfix-cache-v5';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const ASSETS_TO_CACHE = [
   './manifest.json',
   './offline.html',
   './assets/icon.svg',
+  './js/config.js',
   './js/app.js',
   './js/db.js',
   './js/auth.js',
@@ -19,7 +20,9 @@ const ASSETS_TO_CACHE = [
   './js/pages/dashboard.js',
   './js/pages/admin.js',
   './js/pages/public.js',
-  './js/pages/splash.js'
+  './js/pages/splash.js',
+  './js/pages/login.js',
+  './js/pages/signup.js'
 ];
 
 self.addEventListener('install', (e) => {
@@ -45,24 +48,10 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // If it's a navigation request, try network first, then cache, then offline.html
-  if (e.request.mode === 'navigate') {
-    e.respondWith(
-      fetch(e.request).catch(() => {
-        return caches.match('./offline.html');
-      })
-    );
-    return;
-  }
-
-  // For other requests, try cache first, fall back to network
+  // Network first for all requests; fall back to cache when offline
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(e.request).then((response) => {
-        // Don't cache dynamic API requests or Google Maps scripts
+    fetch(e.request)
+      .then((response) => {
         if (!response || response.status !== 200 || response.type !== 'basic' || e.request.url.includes('google') || e.request.url.includes('googleapis')) {
           return response;
         }
@@ -71,8 +60,15 @@ self.addEventListener('fetch', (e) => {
           cache.put(e.request, responseToCache);
         });
         return response;
-      });
-    })
+      })
+      .catch(async () => {
+        const cached = await caches.match(e.request);
+        if (cached) return cached;
+        if (e.request.mode === 'navigate') {
+          return caches.match('./offline.html');
+        }
+        return null;
+      })
   );
 });
 

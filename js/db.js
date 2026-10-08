@@ -93,15 +93,21 @@ const DB = {
     });
   },
 
-  // Seed default data if database is empty
+  // Seed default data if database is empty or outdated
   async seedIfNeeded() {
+    const CURRENT_SEED_VERSION = 'v7_realistic_demo';
     const users = await this.getAll('users');
-    if (users.length > 0) {
-      console.log('Database already seeded.');
+    const existingVersion = localStorage.getItem('civicfix_seed_version');
+
+    if (users.length > 0 && existingVersion === CURRENT_SEED_VERSION) {
+      console.log('Database already seeded with version:', CURRENT_SEED_VERSION);
       return;
     }
 
-    console.log('Seeding database...');
+    console.log('Seeding database with realistic demo photography...');
+    for (const store of ['users', 'issues', 'verifications', 'issue_timeline', 'badges', 'hotspot_predictions', 'monthly_reports']) {
+      try { await this.clear(store); } catch(e) {}
+    }
     
     // Seed Users
     const seedUsers = [
@@ -151,7 +157,7 @@ const DB = {
       },
       {
         id: 'citizen_1',
-        name: 'Amit Sharma',
+        name: 'Alex Turner',
         email: 'citizen@civicfix.gov',
         password_hash: 'citizen123',
         role: 'citizen',
@@ -159,13 +165,13 @@ const DB = {
         ward: 'Ward 4',
         points: 390,
         google_oauth_id: null,
-        avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80',
+        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80',
         created_at: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString(),
         notification_preferences: { email: true, push: true, digest: true }
       },
       {
         id: 'citizen_2',
-        name: 'Sneha Reddy',
+        name: 'Priya Sharma',
         email: 'sneha@gmail.com',
         password_hash: 'citizen123',
         role: 'citizen',
@@ -225,26 +231,26 @@ const DB = {
       await this.put('users', u);
     }
 
-    // Generate SVGs for issue mock images
+    // High quality, realistic Unsplash photographs for real civic demonstration
     const mockImages = {
-      pothole: this.getSvgDataUrl('pothole', false),
-      pothole_fixed: this.getSvgDataUrl('pothole', true),
-      streetlight: this.getSvgDataUrl('streetlight', false),
-      streetlight_fixed: this.getSvgDataUrl('streetlight', true),
-      water_leakage: this.getSvgDataUrl('water_leakage', false),
-      water_leakage_fixed: this.getSvgDataUrl('water_leakage', true),
-      garbage: this.getSvgDataUrl('garbage', false),
-      garbage_fixed: this.getSvgDataUrl('garbage', true),
-      flooding: this.getSvgDataUrl('flooding', false),
-      flooding_fixed: this.getSvgDataUrl('flooding', true),
-      road_damage: this.getSvgDataUrl('road_damage', false),
-      road_damage_fixed: this.getSvgDataUrl('road_damage', true),
-      vandalism: this.getSvgDataUrl('vandalism', false),
-      vandalism_fixed: this.getSvgDataUrl('vandalism', true),
-      encroachment: this.getSvgDataUrl('encroachment', false),
-      encroachment_fixed: this.getSvgDataUrl('encroachment', true),
-      other: this.getSvgDataUrl('other', false),
-      other_fixed: this.getSvgDataUrl('other', true),
+      pothole: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
+      pothole_fixed: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=800&q=80',
+      streetlight: 'https://images.unsplash.com/photo-1509114397022-ed747cca3f65?auto=format&fit=crop&w=800&q=80',
+      streetlight_fixed: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=800&q=80',
+      water_leakage: 'https://images.unsplash.com/photo-1584982751601-97dcc096659c?auto=format&fit=crop&w=800&q=80',
+      water_leakage_fixed: 'https://images.unsplash.com/photo-1581244277943-fe4a9c777189?auto=format&fit=crop&w=800&q=80',
+      garbage: 'https://images.unsplash.com/photo-1605600659908-0ef719419d41?auto=format&fit=crop&w=800&q=80',
+      garbage_fixed: 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=800&q=80',
+      flooding: 'https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=800&q=80',
+      flooding_fixed: 'https://images.unsplash.com/photo-1477959858617-67f30bc75b82?auto=format&fit=crop&w=800&q=80',
+      road_damage: 'https://images.unsplash.com/photo-1590496793929-36417d3117de?auto=format&fit=crop&w=800&q=80',
+      road_damage_fixed: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80',
+      vandalism: 'https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?auto=format&fit=crop&w=800&q=80',
+      vandalism_fixed: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80',
+      encroachment: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=800&q=80',
+      encroachment_fixed: 'https://images.unsplash.com/photo-1496868834840-5f4c98840aaa?auto=format&fit=crop&w=800&q=80',
+      other: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=800&q=80',
+      other_fixed: 'https://images.unsplash.com/photo-1508873696983-2df5293cb325?auto=format&fit=crop&w=800&q=80'
     };
 
     // Seed Issues
@@ -769,7 +775,16 @@ const DB = {
       await this.put('monthly_reports', r);
     }
 
-    console.log('Database seeded successfully.');
+    localStorage.setItem('civicfix_seed_version', CURRENT_SEED_VERSION);
+    console.log('Database seeded successfully with version:', CURRENT_SEED_VERSION);
+  },
+
+  // Public reset method for demo and judge testing
+  async resetDemoData() {
+    localStorage.removeItem('civicfix_seed_version');
+    await this.seedIfNeeded();
+    window.dispatchEvent(new CustomEvent('db-update'));
+    return true;
   },
 
   // Dynamic SVG Generator for issue pictures so we don't rely on random URLs
@@ -868,3 +883,6 @@ const DB = {
     return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
   }
 };
+
+window.DB = DB;
+

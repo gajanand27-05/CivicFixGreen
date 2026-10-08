@@ -2,6 +2,7 @@
 // Interactive Map Page Controller (Google Maps JS SDK)
 
 const MapPage = {
+  isPublic: true,
   map: null,
   markersGroup: [], // holds standard Google Maps markers
   heatmap: null, // Google Maps HeatmapLayer
@@ -44,6 +45,10 @@ const MapPage = {
             <span class="checkmark"></span>
             AI Hotspots
           </label>
+          <hr style="border: 0; border-top: 1px solid var(--border-color, #e2e8f0); margin: 10px 0;">
+          <button id="map-sync-govt-btn" class="btn btn-secondary" style="font-size: 0.76rem; padding: 6px 10px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <i data-lucide="radio"></i> Ingest Live Govt Data
+          </button>
         </div>
 
         <!-- Floating Action Button -->
@@ -108,6 +113,32 @@ const MapPage = {
     this.heatmap = null;
     this.markerClusterer = null;
 
+    // Reset layers and filters to default on each mount
+    this.activeLayers = {
+      issues: true,
+      heatmap: false,
+      hotspots: false
+    };
+    this.filters = {
+      category: 'all',
+      status: 'all',
+      dateRange: 'all'
+    };
+
+    const issuesChk = document.getElementById('layer-issues');
+    if (issuesChk) issuesChk.checked = true;
+    const heatChk = document.getElementById('layer-heatmap');
+    if (heatChk) heatChk.checked = false;
+    const hotChk = document.getElementById('layer-hotspots');
+    if (hotChk) hotChk.checked = false;
+
+    const catFilter = document.getElementById('map-filter-category');
+    if (catFilter) catFilter.value = 'all';
+    const statFilter = document.getElementById('map-filter-status');
+    if (statFilter) statFilter.value = 'all';
+    const dateFilter = document.getElementById('map-filter-date');
+    if (dateFilter) dateFilter.value = 'all';
+
     await this.loadMapData();
     this.initMap();
     this.setupListeners();
@@ -140,7 +171,7 @@ const MapPage = {
           },
           {
             "featureType": "administrative",
-            "elementType": "background",
+            "elementType": "geometry",
             "stylers": [{ "visibility": "off" }]
           },
           {
@@ -184,13 +215,17 @@ const MapPage = {
       }).setView([lat, lng], 14);
 
       const isDark = document.documentElement.classList.contains('dark');
-      const tileUrl = isDark 
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+      const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
       L.tileLayer(tileUrl, {
         maxZoom: 19
       }).addTo(this.map);
+
+      setTimeout(() => {
+        if (this.map && typeof this.map.invalidateSize === 'function') {
+          this.map.invalidateSize();
+        }
+      }, 150);
     }
 
     this.renderLayers();
@@ -267,15 +302,21 @@ const MapPage = {
         if (issue.status === 'in_progress') color = '#F59E0B'; // Amber
         if (issue.status === 'resolved') color = '#10B981'; // Green
 
+        const photoUrl = (issue.media_urls && issue.media_urls[0]) || issue.before_photo_url || '';
         const popupContent = `
-          <div class="map-popup-card" style="color:#0f172a; font-family:sans-serif;">
-            <div class="popup-header" style="display:flex; justify-content:space-between; margin-bottom:6px;">
-              <span class="status-pill status-${issue.status}" style="font-size:10px; padding:2px 6px;">${issue.status.toUpperCase()}</span>
+          <div class="map-popup-card" style="color:#0f172a; font-family:sans-serif; min-width:220px;">
+            ${photoUrl ? `<img src="${photoUrl}" style="width:100%; height:110px; object-fit:cover; border-radius:8px; margin-bottom:8px; display:block;" />` : ''}
+            <div class="popup-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span class="status-pill status-${issue.status}" style="font-size:10px; padding:2px 8px; font-weight:700;">${issue.status.toUpperCase()}</span>
               <span class="severity-badge severity-${issue.severity}" style="position:static; font-size:10px; padding:2px 6px;">Sev ${issue.severity}</span>
             </div>
-            <h4 class="popup-title" style="margin:4px 0; font-size:13px; font-weight:700;">${issue.title.substring(0, 30)}...</h4>
-            <p class="popup-address" style="margin:0; font-size:11px; color:#64748b;">${issue.address.substring(0, 45)}...</p>
-            <button class="btn btn-primary btn-xs mt-2" style="width:100%;" onclick="MapPage.viewIssueDetails('${issue.id}')">View Details</button>
+            <h4 class="popup-title" style="margin:4px 0; font-size:13px; font-weight:700; color:#0f172a; line-height:1.3;">${issue.title}</h4>
+            <p class="popup-address" style="margin:0 0 6px; font-size:11px; color:#64748b;">${issue.address}</p>
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#64748b; margin-bottom:8px;">
+              <span>👍 ${issue.upvote_count || 0} Upvotes</span>
+              <span>Ward: ${issue.ward || 'Ward 4'}</span>
+            </div>
+            <button class="btn btn-primary btn-xs" style="width:100%; font-weight:700; padding:6px;" onclick="MapPage.viewIssueDetails('${issue.id}')">View Details</button>
           </div>
         `;
 
@@ -322,24 +363,24 @@ const MapPage = {
           this.markersGroup.push(marker);
           activeMarkers.push(marker);
         } else {
-          // Leaflet marker rendering
+          // High performance Leaflet marker rendering
           const marker = L.circleMarker([issue.lat, issue.lng], {
-            radius: 8,
+            radius: 9,
             fillColor: color,
-            fillOpacity: 0.9,
+            fillOpacity: 0.95,
             color: '#FFFFFF',
             weight: 2
           });
-          marker.bindPopup(popupContent);
+          marker.bindPopup(popupContent, { maxWidth: 260 });
 
           if (issue.severity === 5) {
             const warnCircle = L.circle([issue.lat, issue.lng], {
-              radius: 80,
+              radius: 90,
               color: '#DC2626',
               weight: 1.5,
               opacity: 0.8,
               fillColor: '#DC2626',
-              fillOpacity: 0.15
+              fillOpacity: 0.18
             }).addTo(this.map);
             this.markersGroup.push(warnCircle);
           }
@@ -358,16 +399,7 @@ const MapPage = {
             });
           }
         } else {
-          if (typeof L.markerClusterGroup !== 'undefined') {
-            this.markerClusterer = L.markerClusterGroup({
-              showCoverageOnHover: false,
-              maxClusterRadius: 40
-            });
-            activeMarkers.forEach(m => this.markerClusterer.addLayer(m));
-            this.map.addLayer(this.markerClusterer);
-          } else {
-            activeMarkers.forEach(m => m.addTo(this.map));
-          }
+          activeMarkers.forEach(m => m.addTo(this.map));
         }
       }
     }
@@ -479,6 +511,37 @@ const MapPage = {
 
     document.getElementById('map-filter-date').addEventListener('change', (e) => {
       this.filters.dateRange = e.target.value;
+      this.renderLayers();
+    });
+
+    // Ingest Live Govt Data on Map
+    const mapSyncBtn = document.getElementById('map-sync-govt-btn');
+    if (mapSyncBtn) {
+      mapSyncBtn.addEventListener('click', async () => {
+        mapSyncBtn.disabled = true;
+        const orig = mapSyncBtn.innerHTML;
+        mapSyncBtn.innerHTML = `<i data-lucide="loader-2" class="spin"></i> Syncing...`;
+        if (window.lucide) window.lucide.createIcons();
+        try {
+          if (window.GovtDataService) {
+            const res = await window.GovtDataService.syncGovtTicketsToDB(8);
+            App.showToast(`Ingested ${res.syncedCount} Live Municipal Tickets!`, 'success');
+            await this.loadMapData();
+            this.renderLayers();
+          }
+        } catch (e) {
+          console.error(e);
+        } finally {
+          mapSyncBtn.disabled = false;
+          mapSyncBtn.innerHTML = orig;
+          if (window.lucide) window.lucide.createIcons();
+        }
+      });
+    }
+
+    // Auto update layers if DB changes
+    window.addEventListener('db-update', async () => {
+      await this.loadMapData();
       this.renderLayers();
     });
 

@@ -9,8 +9,11 @@ const AdminPage = {
       <div class="admin-container">
         <!-- Header -->
         <div class="admin-header card">
-          <h1>Admin Control Panel</h1>
-          <p>Create and manage municipal officer accounts, configure wards, and audit global settings.</p>
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 8px;">
+            <h1>Admin Control Panel</h1>
+            <a href="#/dashboard" class="btn btn-outline btn-sm"><i data-lucide="layout-dashboard"></i> Back to GovPortal</a>
+          </div>
+          <p class="text-muted">Create and manage municipal officer accounts, configure wards, and audit global settings.</p>
         </div>
 
         <div class="split-pane-layout mt-4">

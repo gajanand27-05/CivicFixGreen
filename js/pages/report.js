@@ -77,7 +77,7 @@ const ReportPage = {
                 <button class="sim-cat-btn" data-cat="garbage"><i data-lucide="trash-2"></i> Garbage</button>
                 <button class="sim-cat-btn" data-cat="flooding"><i data-lucide="waves"></i> Flooding</button>
                 <button class="sim-cat-btn" data-cat="road_damage"><i data-lucide="navigation-2"></i> Road Damage</button>
-                <button class="sim-cat-btn" data-cat="vandalism"><i data-lucide="dribbble"></i> Vandalism</button>
+                <button class="sim-cat-btn" data-cat="vandalism"><i data-lucide="palette"></i> Vandalism</button>
                 <button class="sim-cat-btn" data-cat="encroachment"><i data-lucide="store"></i> Encroachment</button>
                 <button class="sim-cat-btn" data-cat="other"><i data-lucide="help-circle"></i> Other</button>
               </div>
@@ -604,10 +604,7 @@ const ReportPage = {
         attributionControl: false
       }).setView([lat, lng], 14);
 
-      const isDark = document.documentElement.classList.contains('dark');
-      const tileUrl = isDark 
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+      const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
       L.tileLayer(tileUrl, {
         maxZoom: 19

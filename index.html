@@ -2,12 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>CivicFix | Community Issue Reporting</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CivicFix | AI-Powered Community Issue Reporting & Resolution</title>
   
-  <!-- PWA manifest -->
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+  <link rel="shortcut icon" href="assets/icon.svg">
+
+  <!-- PWA manifest & Mobile Meta -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1A56DB">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   
@@ -27,7 +32,7 @@
   <!-- App Layout Wrapper -->
   <div class="app-layout">
     
-    <!-- DESKTOP TOP NAV BAR -->
+    <!-- DESKTOP TOP NAV BAR (WEBSITE HEADER) -->
     <header class="desktop-header" id="desktop-top-nav">
       <div class="logo-section" onclick="Router.navigate('#/home')">
         <svg viewBox="0 0 512 512" class="header-logo-icon">
@@ -35,26 +40,34 @@
           <circle cx="256" cy="240" r="100" fill="#FFFFFF" />
           <path d="M208,248 L238,278 L304,200" fill="none" stroke="#1A56DB" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
-        <span class="logo-text">CivicFix</span>
+        <span class="logo-text">CivicFix<span class="logo-badge">AI</span></span>
       </div>
 
       <nav class="desktop-nav-links">
         <a href="#/home" class="nav-link"><i data-lucide="home"></i> Home Feed</a>
-        <a href="#/report" class="nav-link"><i data-lucide="plus-circle"></i> Report Issue</a>
         <a href="#/map" class="nav-link"><i data-lucide="map"></i> Interactive Map</a>
+        <a href="#/public" class="nav-link"><i data-lucide="bar-chart-2"></i> City Board</a>
         <a href="#/leaderboard" class="nav-link"><i data-lucide="trophy"></i> Leaderboard</a>
+        <a href="#/report" class="nav-link"><i data-lucide="plus-circle"></i> Report Issue</a>
         <a href="#/profile" class="nav-link"><i data-lucide="user"></i> Profile</a>
       </nav>
 
       <div class="desktop-actions">
+        <!-- Theme toggle -->
+        <button class="icon-btn" id="theme-toggle-header" title="Toggle Dark/Light Mode">
+          <i data-lucide="moon" id="theme-toggle-icon"></i>
+        </button>
+
         <!-- Notification bell -->
         <button class="icon-btn" id="notif-bell" title="Notifications">
           <i data-lucide="bell"></i>
           <span class="badge" id="notif-badge" style="display: none;">0</span>
         </button>
+
         <!-- Dynamic Login/Avatar container -->
         <div id="desktop-auth-btn">
-          <button class="btn btn-outline" onclick="Router.navigate('#/login')">Authority Login</button>
+          <button class="btn btn-outline btn-sm" onclick="Router.navigate('#/login')">Sign In</button>
+          <button class="btn btn-primary btn-sm" onclick="Router.navigate('#/signup')">Sign Up</button>
         </div>
       </div>
     </header>
@@ -69,7 +82,10 @@
         </svg>
         <span class="logo-text">CivicFix</span>
       </div>
-      <div class="mobile-actions" style="display: flex; align-items: center; gap: 12px;">
+      <div class="mobile-actions" style="display: flex; align-items: center; gap: 10px;">
+        <button class="icon-btn" id="theme-toggle-mobile" title="Toggle Theme">
+          <i data-lucide="moon"></i>
+        </button>
         <button class="icon-btn" id="notif-bell-mobile">
           <i data-lucide="bell"></i>
           <span class="badge" id="notif-badge-mobile" style="display: none;">0</span>
@@ -77,23 +93,6 @@
         <div id="mobile-auth-btn"></div>
       </div>
     </header>
-
-    <!-- SIDEBAR FOR AUTHORITY DASHBOARD PORTALS -->
-    <aside class="sidebar-layout-aside" id="sidebar-nav" style="display: none;">
-      <div class="sidebar-brand">
-        <svg viewBox="0 0 512 512" width="28" height="28">
-          <path d="M256,64 C160,64 80,144 80,240 C80,360 224,448 256,448 C288,448 432,360 432,240 C432,144 352,64 256,64 Z" fill="#FFFFFF" />
-          <circle cx="256" cy="240" r="100" fill="#1A56DB" />
-          <path d="M208,248 L238,278 L304,200" fill="none" stroke="#FFFFFF" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        <span>GovPortal</span>
-      </div>
-      <ul class="sidebar-links">
-        <li><a href="#/dashboard" class="nav-link"><i data-lucide="layout-dashboard"></i> Overview</a></li>
-        <li><a href="#/admin" class="nav-link" id="aside-admin-link"><i data-lucide="users"></i> Admin Panels</a></li>
-        <li><a href="#/home" class="nav-link"><i data-lucide="eye"></i> Citizen View</a></li>
-      </ul>
-    </aside>
 
     <!-- MAIN APP ROUTED CONTENT CONTAINER -->
     <main class="app-content" id="main-content">
@@ -140,7 +139,7 @@
   <!-- Toast alerts container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- Define Google Maps failure callback before script load -->
+  <!-- Map Engine Initialization (High-performance Leaflet primary, Google Maps optional) -->
   <script>
     window.googleMapsFailed = false;
     window.gm_authFailure = function() {
@@ -148,11 +147,14 @@
       window.googleMapsFailed = true;
       window.dispatchEvent(new CustomEvent('google-maps-failed'));
     };
+    // Dynamically load Google Maps only if a custom valid key is set in CONFIG
+    if (window.CONFIG && window.CONFIG.GOOGLE_MAPS_KEY && !window.CONFIG.GOOGLE_MAPS_KEY.startsWith('YOUR_') && window.CONFIG.GOOGLE_MAPS_KEY !== 'REDACTED_GOOGLE_API_KEY') {
+      const gScript = document.createElement('script');
+      gScript.src = `https://maps.googleapis.com/maps/api/js?key=${window.CONFIG.GOOGLE_MAPS_KEY}&libraries=visualization`;
+      gScript.async = true;
+      document.head.appendChild(gScript);
+    }
   </script>
-
-  <!-- Google Maps JavaScript SDK & Clusterer -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=REDACTED_GOOGLE_API_KEY&libraries=visualization"></script>
-  <script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
 
   <!-- Leaflet JS Fallbacks -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -167,26 +169,27 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- APPLICATION CODE FILES -->
-  <script src="js/config.js"></script>
-  <script src="js/db.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/ai.js"></script>
-  <script src="js/router.js"></script>
+  <script src="js/config.js?v=9"></script>
+  <script src="js/db.js?v=9"></script>
+  <script src="js/services/govtData.js?v=9"></script>
+  <script src="js/auth.js?v=9"></script>
+  <script src="js/ai.js?v=9"></script>
+  <script src="js/router.js?v=9"></script>
   
   <!-- ROUTE CONTROLLERS -->
-  <script src="js/pages/splash.js"></script>
-  <script src="js/pages/login.js"></script>
-  <script src="js/pages/signup.js"></script>
-  <script src="js/pages/home.js"></script>
-  <script src="js/pages/report.js"></script>
-  <script src="js/pages/map.js"></script>
-  <script src="js/pages/leaderboard.js"></script>
-  <script src="js/pages/profile.js"></script>
-  <script src="js/pages/dashboard.js"></script>
-  <script src="js/pages/admin.js"></script>
-  <script src="js/pages/public.js"></script>
+  <script src="js/pages/splash.js?v=9"></script>
+  <script src="js/pages/login.js?v=9"></script>
+  <script src="js/pages/signup.js?v=9"></script>
+  <script src="js/pages/home.js?v=9"></script>
+  <script src="js/pages/report.js?v=9"></script>
+  <script src="js/pages/map.js?v=9"></script>
+  <script src="js/pages/leaderboard.js?v=9"></script>
+  <script src="js/pages/profile.js?v=9"></script>
+  <script src="js/pages/dashboard.js?v=9"></script>
+  <script src="js/pages/admin.js?v=9"></script>
+  <script src="js/pages/public.js?v=9"></script>
   
   <!-- COORDINATOR ENTRYPOINT -->
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=9"></script>
 </body>
 </html>

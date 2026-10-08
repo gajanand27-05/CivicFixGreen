@@ -198,10 +198,7 @@ const PublicPage = {
         attributionControl: false
       }).setView([lat, lng], 14);
 
-      const isDark = document.documentElement.classList.contains('dark');
-      const tileUrl = isDark 
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+      const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
       L.tileLayer(tileUrl, {
         maxZoom: 19
@@ -409,10 +406,7 @@ const PublicIssuePage = {
         }).setView([issue.lat, issue.lng], 15);
         window.publicIssueMap = map;
 
-        const isDark = document.documentElement.classList.contains('dark');
-        const tileUrl = isDark 
-          ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-          : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+        const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
         L.tileLayer(tileUrl, {
           maxZoom: 19

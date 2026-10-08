@@ -9,8 +9,11 @@ window.CONFIG = CONFIG;
 
 const MapHelper = {
   isGoogleMapsAvailable() {
-    return typeof google !== 'undefined' && typeof google.maps !== 'undefined' && !window.googleMapsFailed;
+    const key = (window.CONFIG && window.CONFIG.GOOGLE_MAPS_KEY) || '';
+    const hasValidKey = key.length > 10 && !key.startsWith('YOUR_') && key !== 'REDACTED_GOOGLE_API_KEY';
+    return hasValidKey && typeof google !== 'undefined' && typeof google.maps !== 'undefined' && !window.googleMapsFailed;
   }
 };
 window.MapHelper = MapHelper;
+
 

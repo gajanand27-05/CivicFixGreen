@@ -2,6 +2,7 @@
 // Leaderboard Page Controller
 
 const LeaderboardPage = {
+  isPublic: true,
   currentTab: 'month', // 'month' or 'all_time'
 
   async render() {
