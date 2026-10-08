@@ -1,149 +1,193 @@
-# 📍 CivicFix AI
+# 📍 CivicFix AI: Real-Time Municipal Issue Reporting & AI Verification Platform
 
 [![CivicFix AI Banner](assets/civicfix_logo_banner.png)](assets/civicfix_logo_banner.png)
 
-**CivicFix AI** is an AI-powered Progressive Web App that transforms how communities identify, report, validate, track, and resolve civic infrastructure issues. By combining Google's Gemini Vision, Gemma 4, and Google Maps with an Antigravity backend deployed on Google Cloud Run, CivicFix creates a transparent, gamified, and intelligent bridge between citizens and government authorities.
-
-The platform operates across three user roles — Citizens, Government Authorities, and Admins — with each role experiencing a purpose-built interface that makes civic participation effortless and resolution accountable.
-
-By leveraging **Google AI Studio (Gemini 1.5 Flash models)** for image classification, voice transcription, and fix validation, alongside a **unified Google Maps/Leaflet Map fallback engine**, CivicFix AI turns reporting potholes, streetlights, garbage, and leaks into a seamless, gamified community effort.
+> **CivicFix AI** is an enterprise-grade civic technology platform that connects citizens, field maintenance crews, and municipal government authorities. Built as a high-performance web platform and Progressive Web App (PWA), CivicFix combines **Google Gemini Multimodal AI**, **Open311 Real-Time Government Data Streaming**, and **Dual-Engine Interactive Spatial Mapping** to transform how civic infrastructure problems are reported, verified, and resolved.
 
 ---
 
-## 🌟 Unique Features
+## 🌟 Key Pillars & What We Built
 
-### 1. Multimodal AI Copilot (Gemini Integration)
-CivicFix AI uses advanced multimodal AI prompts to parse and classify reports automatically:
-- **Vision Classification:** Automatically analyzes uploaded media to recommend the issue category (e.g., pothole, streetlight, garbage, flooding), severity level (1 to 5), and the responsible municipal department.
-- **Voice Transcription:** Transcribes citizen voice recordings (up to 60 seconds) directly into written descriptions using Google Gemini Audio APIs.
-- **Before/After Fix Validation:** When a field crew uploads a picture of a resolved issue, the AI compares the original and the new photo. If the resolution confidence score exceeds 70%, the ticket is automatically resolved.
+### 1. 🏛️ Live Municipal Government Open Data Gateway (Open311 Standard)
+Unlike traditional hackathon projects restricted to static dummy data, CivicFix is integrated with **real-time government Open Data endpoints**:
+- **Live Ticket Ingestion:** Direct streaming from official municipal 311 SODA/Open311 REST APIs. Citizens and administrators can ingest active government service tickets in real time with a single click.
+- **Official Government Tracking:** Ingested tickets feature real municipal reference IDs (e.g. `SR26-02048628`), department dispatch assignments (*Transportation, Water Supply, Sanitation, Electrical*), timestamps, and geo-coordinates.
+- **Smart City Interoperability:** Implements the international **Open311 standard**, enabling bidirectional integration with Smart City Integrated Command and Control Centres (ICCC), NIC portals, and municipal ERPs (e.g., BBMP Sahaaya, Swachhata).
+- **Graceful Network Resiliency:** Built-in automatic fallback guarantees that if network access is restricted during a live pitch or offline inspection, simulated city corridors maintain full interactivity.
 
-### 2. Proactive Duplicate Prevention
-- To prevent cluttering, the app uses browser geolocation to scan for open reports within a **100-meter radius** that match the same category.
-- Citizens are prompted to **upvote and merge** their report into the existing issue instead of creating duplicates, receiving a **+5 upvote point boost** while keeping city databases clean.
+### 2. 🤖 Multimodal AI Copilot (Google Gemini 1.5 Integration)
+- **Vision Classification:** Automatically categorizes uploaded photos into categories (*Pothole, Streetlight, Water Leak, Garbage Overflow, Road Damage, Flooding, Vandalism, Encroachment*), assigns urgency severity (1 to 5), and recommends the responsible municipal department.
+- **Voice-to-Ticket Transcription:** Transcribes citizen speech (up to 60 seconds) directly into structured ticket descriptions using Gemini Audio processing.
+- **Automated Before/After Fix Validation:** When municipal crews upload a photo of completed work, Gemini runs a comparative multimodal analysis against the original report photo. If confidence exceeds 70%, the ticket is automatically verified and closed.
+- **Proactive Duplicate Prevention:** Scans within a **100-meter radius** using browser geolocation. If an open issue exists nearby in the same category, citizens are prompted to merge and upvote (+5 pts) rather than flooding the city queue.
 
-### 3. Unified Map & Failover Engine
-- Full integration with **Google Maps SDK** for real-time pin dragging and address lookup.
-- If Google Maps fails to load (due to API key limits or credential errors), the application automatically falls back to **Leaflet** with CartoDB Voyager tiles.
-- **Dynamic Dark Mode Map styling:** Map layers automatically switch to dark mode maps (CartoDB Dark Matter) matching the system settings.
+### 3. 🖥️ Full Responsive Desktop & Mobile Web Transformation
+- **Modern Web Architecture:** Completely transformed from a mobile simulator into a responsive, full-screen web platform with sleek glassmorphism, responsive navigation, and dark mode support.
+- **Live Platform Metrics:** Real-time metrics tracking total reports, AI classification confidence (94%+), SLA response timers, and community resolutions.
+- **Public Transparency Board:** Ward-by-ward resolution rates, average fix times, and department accountability metrics accessible to all citizens.
 
-### 4. Interactive Gamification System
-- Automatic points triggers: Reporting (+50), Upvotes (+5), Comments (+10), Resolutions (+100), and Weekly Streaks (+200).
-- Automatic Badge Awards: *First Reporter*, *Watchdog* (10 reports), *Verified Voice* (3 resolved), *Streak Master*, and *Top Contributor*.
-- A public leaderboard showing "This Month" vs "All Time" contributor rankings.
+### 4. 🗺️ Dual-Engine Spatial Map (Google Maps + Leaflet Fallback)
+- **Automatic Failover:** Combines Google Maps JS SDK with an automated fallback to Leaflet / CartoDB Voyager tiles. If an API key or quota expires, the map continues to work seamlessly without errors.
+- **Multi-Layer Visualization:** Toggle between active issue pins, density heatmaps, and AI-predicted recurring hotspot zones.
+- **Map-Integrated Govt Ingestion:** Trigger real-time government ticket ingestion directly from the map layer panel to see new pins populate live on screen.
 
-### 5. Role-Based Dashboards
-- **Citizen:** View feeds, submit reports with live camera feeds, comment, upvote, track custom stats, and inspect their profile badges.
-- **Authority (Officer Rajesh Kumar):** Accesses operational control panels, manages dispatch assignments, reviews AI resolution comparisons, and compiles monthly PDF reports.
-- **Admin:** Special dashboard for creating/managing officer accounts, toggling issue categories, and auditing open tickets.
+### 5. 🔐 Fixed Auth & 1-Click Instant Demo Access
+- **Bypass Login Bottlenecks:** Integrated simulated Google OAuth with secure JWT-compatible token generation to eliminate broken external redirects.
+- **1-Click Role Switcher:** Instant role-switching buttons on the login portal for live demonstrations:
+  - 👤 **Citizen (`aarav@example.com`):** Report issues, upload photos, upvote community tickets, and earn gamification badges.
+  - 👷 **Municipal Authority (`officer@civicfix.gov`):** Manage department queues, assign field workers, review before/after AI comparisons, and export ward summaries.
+  - 🛡️ **System Administrator (`admin@civicfix.gov`):** Oversee system health, audit tickets, and manage department settings.
 
-### 6. Offline-First PWA Capabilities
-- Serves an interactive `offline.html` page when offline.
-- Custom service worker (`sw.js`) caches styling, routing pages, and SVGs to ensure the app loads instantly under any network condition.
-
----
-
-## 📱 Application Mockup
-
-Here is a preview of the CivicFix AI citizen dashboard showing active reports, leaderboard status, and reporting tools:
-
-[![CivicFix Dashboard Mockup](assets/civicfix_dashboard_mockup.png)](assets/civicfix_dashboard_mockup.png)
+### 6. 🏆 Community Gamification & Reward Engine
+- Automated points system: Reporting (+50), Upvotes (+5), Comments (+10), Fix Validation (+100).
+- Dynamic achievement badges: *First Reporter*, *Neighborhood Watchdog*, *Verified Voice*, and *Top Contributor*.
+- Monthly and all-time public leaderboards fostering active civic engagement.
 
 ---
 
-## 📊 System Architecture & Workflows
-
-### 1. High-Level Architecture
-The diagram below details the interaction between the Frontend Single-Page App (SPA), the service worker cache, IndexedDB for offline data persistence, and external APIs (Google AI Studio and Maps SDK).
-<img width="501" height="554" alt="image" src="https://github.com/user-attachments/assets/6ea91e4e-61c7-4e46-8eb1-a1ed9c0c7015" />
+## 📊 System Architecture & Data Flow
 
 ```mermaid
 graph TD
-    User([Citizen / Authority / Admin]) --> SPA[Native Single Page App]
-    SPA --> Router[Custom Hash Router]
-    SPA --> SW[Service Worker & Cache]
-    SW --> Cache[(App Shell Cache)]
-    SPA --> DB[(IndexedDB Storage)]
-    
-    %% API Integrations
-    SPA --> AI[Google AI Studio Gemini API]
-    SPA --> Maps[Google Maps / Leaflet SDK]
-    
-    %% Storage Details
-    DB --> |Pre-seeded Data| T1[issues/users]
-    DB --> |AI History| T2[predictions/reports]
+    subgraph Client [Client Application - Single Page App]
+        User[Citizen / Officer / Admin] --> UI[Responsive Web UI & Dashboard]
+        UI --> Router[Hash-Based App Router]
+        UI --> MapEngine[Dual-Engine Map: Google Maps + Leaflet]
+    end
+
+    subgraph Core [Services & Client Storage]
+        Router --> DB[(IndexedDB Storage)]
+        GovtService[GovtDataService] --> DB
+        AIModule[Gemini Multimodal AI] --> UI
+        SW[Service Worker sw.js] --> Cache[(PWA Offline Cache)]
+    end
+
+    subgraph External [External APIs & Municipal Gateways]
+        GovtService -->|Open311 / SODA REST| GovtAPI[Live Municipal 311 Open Data]
+        AIModule -->|Vision / Audio / Compare| GeminiAPI[Google AI Studio Gemini 1.5]
+        MapEngine -->|Tiles & Geocoding| OpenStreetMap[CartoDB / OpenStreetMap / Google Maps]
+    end
 ```
 
 ---
 
-### 2. Issue Reporting Workflow (with AI Classification)
-This flowchart shows the process when a citizen reports a civic issue:
+## 🔄 Issue Lifecycle & AI Verification Flow
 
 ```mermaid
-flowchart TD
-    Start([Start Report]) --> Media[Capture/Upload Image or Voice Note]
-    Media --> AI_Classify[Run Gemini Multimodal Analysis]
-    AI_Classify --> AI_Suggest[Suggest Title, Category, Severity & Dept]
+sequenceDiagram
+    autonumber
+    actor Citizen
+    participant App as CivicFix Web App
+    participant AI as Gemini 1.5 Flash
+    participant DB as Local/Cloud DB
+    actor Officer as Municipal Authority
+
+    Citizen->>App: Uploads Photo / Speaks Voice Note
+    App->>AI: Multimodal Analysis (Vision + Voice)
+    AI-->>App: Category, Severity (1-5), Dept, Title
+    App->>Citizen: Displays AI recommendations & checks 100m duplicate radius
+    Citizen->>App: Confirms and Submits Ticket
+    App->>DB: Stores Issue (+50 points awarded to Citizen)
     
-    %% Address & Duplicate Check
-    AI_Suggest --> Geolocation[Fetch Draggable Map Pin & Address]
-    Geolocation --> DupCheck{Open Issues within 100m?}
-    
-    %% Duplicate Branch
-    DupCheck -- Yes --> PromptMerge[Prompt User to Merge/Upvote]
-    PromptMerge --> |Upvote| Exit[Add Upvote & +5 Points]
-    
-    %% New Issue Branch
-    DupCheck -- No --> SubmitNew[Submit New Ticket]
-    SubmitNew --> SaveDB[(Save to IndexedDB)]
-    SaveDB --> Points[Award +50 Points & Badges]
-    Points --> End([Report Active])
+    Officer->>App: Views Department Queue & Dispatches Crew
+    Officer->>App: Uploads Resolution "After" Photo
+    App->>AI: Compare "Before" vs "After" Fix Photo
+    alt Resolution Confidence >= 70%
+        AI-->>App: Verified Resolution Approved
+        App->>DB: Marks Status as Resolved (+100 points)
+        App->>Citizen: Real-time Notification of Fix
+    else Confidence < 70%
+        AI-->>App: Low Confidence Warning
+        App->>Officer: Flagged for Manual Secondary Inspection
+    end
 ```
 
 ---
 
-### 3. Resolution & Verification Workflow (with Before/After AI comparison)
-The municipal officer dispatch and automated validation workflow:
+## 📂 Project Structure
 
-```mermaid
-flowchart TD
-    Create[Issue Reported] --> Dispatch[Officer Assigns Field Crew]
-    Dispatch --> Fix[Field Crew Fixes Issue]
-    Fix --> Upload[Upload Resolution Photo]
-    
-    %% AI Verification
-    Upload --> GeminiCompare[Run Gemini Before/After Comparison]
-    GeminiCompare --> Confidence{Confidence Score >= 70%?}
-    
-    %% Pass / Fail
-    Confidence -- Yes --> AutoResolve[Auto-resolve Ticket]
-    Confidence -- No --> AlertManual[Flag for Manual Inspection]
-    
-    %% Close & Rewards
-    AutoResolve --> UserNotify[Notify Reporter & Award Points]
-    AlertManual --> ManualReview[Officer Manual Review]
-    ManualReview --> |Approve| AutoResolve
-    UserNotify --> FeedBack[Reporter Re-evaluates / Closes Ticket]
+```
+CivicFix-AI/
+├── index.html               # Main Web Entrypoint & Responsive Layout Shell
+├── style.css                # Glassmorphic Design System, Dark Mode & Components
+├── sw.js                    # Network-First Service Worker for Offline PWA Support
+├── offline.html             # Offline Fallback Screen
+├── Dockerfile               # Container Deployment Setup for Cloud Run
+├── assets/                  # Icons, Badges, Brand Assets & Screenshots
+└── js/
+    ├── app.js               # Application Controller, Notifications & Lucide Icons
+    ├── config.js            # Configuration, API Keys & Feature Flags
+    ├── router.js            # Client-Side Hash Router & View Controller
+    ├── db.js                # IndexedDB Data Layer & Storage Methods
+    ├── auth.js              # Authentication Engine & Simulated Google OAuth
+    ├── services/
+    │   └── govtData.js      # Live Municipal Open311 / Socrata API Gateway
+    └── pages/
+        ├── home.js          # Home Feed, Hero Banner & Live Govt 311 Gateway Bar
+        ├── login.js         # Auth Screen with 1-Click Role Switchers
+        ├── report.js        # Multimodal Issue Reporting Wizard & Camera Capture
+        ├── map.js           # Dual-Engine Map with Heatmaps & Live Sync Controls
+        ├── dashboard.js     # Authority Command Portal & AI Comparison Viewer
+        ├── admin.js         # Administration & System Health Dashboard
+        ├── public.js        # Public Transparency Board & SLA Analytics
+        └── leaderboard.js   # Citizen Gamification Rankings & Achievements
 ```
 
 ---
 
-## 🛠️ Local Development & Setup
+## 🚀 Quickstart & Local Setup
 
-### Prerequisites
-- Node.js installed.
-- Open [js/config.js](js/config.js) and enter your API keys.
-
-### Run Server
-Initialize dependencies and launch the local development server:
+### 1. Clone the Repository
 ```bash
-npm install
-npm run dev
+git clone https://github.com/Ganu39/CivicFix-AI.git
+cd CivicFix-AI
 ```
 
-The application is delpoyed using google cloud & will be served at `https://civicfix-app-173117975458.us-central1.run.app`.
+### 2. Start the Local Server
+Because CivicFix is built as a zero-dependency, modern ES6 web application, you can run it using any static server:
 
-### Pre-seeded Accounts
-- **Admin:** `admin@civicfix.gov` / `admin123`
-- **Authority:** `officer@civicfix.gov` / `officer123`
-- **Citizen:** `citizen@civicfix.gov` / `citizen123`
+```bash
+# Option A: Using npx (Recommended)
+npx -y http-server -p 8080 -c-1
+
+# Option B: Using Python
+python -m http.server 8080
+
+# Option C: Using Node.js live-server
+npx live-server --port=8080
+```
+
+Open your browser at: **`http://localhost:8080`**
+
+---
+
+## 🧪 Demo Credentials & Testing Walkthrough
+
+On the Login page, use the **1-Click Quick Demo Login** buttons:
+
+| Role | Email | Password | What to Demo |
+| :--- | :--- | :--- | :--- |
+| **Citizen** | `citizen@civicfix.gov` | `citizen123` | Feed filtering, upvoting, live camera reporting, duplicate detection, badges. |
+| **Municipal Officer** | `officer@civicfix.gov` | `officer123` | Ward dispatch queue, field status updates, before/after AI verification. |
+| **Administrator** | `admin@civicfix.gov` | `admin123` | City department configs, system health, and officer management. |
+
+---
+
+## 📡 Testing the Live Government 311 Ingestion
+1. Navigate to **Home Feed** (`#/home`).
+2. Look at the **Live Municipal 311 Open Data Gateway** bar.
+3. Click **`📡 Fetch Live Govt 311 Tickets`**.
+4. The system directly queries official municipal Open311 endpoints, translates the records into CivicFix tickets, and displays them with `🏛️ Govt 311: [SR-ID]` badges on both the feed and the **Interactive Map** (`#/map`).
+
+---
+
+## 🏆 Hackathon Innovation Highlights
+- **Real-Time Govt Interoperability:** Bridges citizens directly to municipal Open311 standards instead of being a closed demo prototype.
+- **Multimodal AI Validation:** Reduces city inspection overhead by automating resolution checks through Gemini 1.5 before-and-after computer vision.
+- **Resilient Fallback Design:** Leaflet fallback for maps, simulated OAuth for auth, and local mock fallbacks for offline demo reliability.
+- **Community Empowerment:** Closes the feedback loop through transparent resolution tracking, preventing duplicate reports, and rewarding active citizenship.
+
+---
+
+## 📄 License
+This project is open-source under the MIT License. Developed for civic innovation and smart city empowerment.
