@@ -195,11 +195,11 @@ def api_cron_tick(authorization: str = Header(default="")):
     return {"ok": True}
 
 
-# ---------- frontend for local runs (on Vercel the static files are served by the platform) ----------
-if not ON_VERCEL:
-    app.mount("/js", StaticFiles(directory=ROOT / "js"), name="js")
-    app.mount("/assets", StaticFiles(directory=ROOT / "assets"), name="assets")
-    app.mount("/css", StaticFiles(directory=ROOT / "css"), name="css")
+# ---------- frontend (only whitelisted folders/files; never serve server/) ----------
+# Vercel runs this as a FastAPI backend app, so the app serves the static frontend there too.
+for folder in ("js", "assets", "css"):
+    if (ROOT / folder).is_dir():
+        app.mount(f"/{folder}", StaticFiles(directory=ROOT / folder), name=folder)
 
 
 @app.get("/")
