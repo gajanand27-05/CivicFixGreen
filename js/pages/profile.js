@@ -65,6 +65,7 @@ const ProfilePage = {
           <div class="settings-tabs">
             <button class="settings-tab active" data-settings-tab="edit-profile">Edit profile</button>
             <button class="settings-tab" data-settings-tab="preferences">Notifications</button>
+            <button class="settings-tab" data-settings-tab="email-sending">Email sending</button>
           </div>
 
           <div class="settings-tab-panel active-panel" id="panel-edit-profile">
@@ -123,6 +124,31 @@ const ProfilePage = {
 
             <button class="btn btn-primary mt-3" id="save-preferences-btn">Save</button>
           </div>
+
+          <div class="settings-tab-panel" id="panel-email-sending">
+            <p class="pf-hint mb-3">Connect your Gmail so your complaints are emailed to the GBA office <strong>from your own address</strong>,
+              and the office's reply (with the cleaned-spot photo) arrives in your inbox and updates the complaint automatically.</p>
+            <div id="gmail-status" class="pf-gmail-status">Checking…</div>
+            <form id="gmail-settings-form" novalidate autocomplete="off">
+              <div class="form-group">
+                <label for="gmail-address">Gmail address (GMAIL_ADDRESS)</label>
+                <input type="email" id="gmail-address" class="form-control" placeholder="yourname@gmail.com" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label for="gmail-app-password">App Password (GMAIL_APP_PASSWORD)</label>
+                <input type="password" id="gmail-app-password" class="form-control" placeholder="16-character App Password" autocomplete="new-password">
+                <small class="pf-hint">Not your normal Gmail password. Create one at
+                  <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a>
+                  (2-Step Verification must be on). Also turn on IMAP in Gmail &rsaquo; Settings &rsaquo; Forwarding and POP/IMAP.
+                  It is stored on the EcoSort server and never shown again.</small>
+              </div>
+              <div class="pf-gmail-actions">
+                <button type="submit" class="btn btn-primary" id="gmail-save-btn">Save &amp; verify</button>
+                <button type="button" class="btn btn-outline" id="gmail-test-btn">Send test email</button>
+                <button type="button" class="btn btn-outline pf-danger" id="gmail-remove-btn">Disconnect</button>
+              </div>
+            </form>
+          </div>
         </div>
 
         <div class="profile-card card mt-4">
@@ -143,7 +169,80 @@ const ProfilePage = {
 
     await this.loadStatsAndBadges();
     this.setupListeners();
+    this.setupGmailSettings(user);
     this.loadActivityTimeline();
+  },
+
+  async gmailApi(user, method, body) {
+    const res = await fetch(`${CONFIG.API_BASE}/api/users/${encodeURIComponent(user.id)}/email-settings`, {
+      method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || `Request failed (${res.status})`);
+    return data;
+  },
+
+  renderGmailStatus(view) {
+    const box = document.getElementById('gmail-status');
+    if (!box) return;
+    const esc = s => String(s || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    box.className = 'pf-gmail-status ' + (view.configured ? 'is-on' : 'is-off');
+    box.innerHTML = view.configured
+      ? `✅ Connected as <strong>${esc(view.gmail_address)}</strong>. Your complaints are emailed from this address.`
+      : '📭 Not connected. Complaints are sent from the shared EcoSort account if one is set up, otherwise tracked in the app only.';
+    const addr = document.getElementById('gmail-address');
+    if (addr && view.configured && !addr.value) addr.value = view.gmail_address;
+    document.getElementById('gmail-app-password').placeholder = view.configured ? '•••••••••••••••• (saved; enter a new one to replace it)' : '16-character App Password';
+    document.getElementById('gmail-remove-btn').style.display = view.configured ? '' : 'none';
+    document.getElementById('gmail-test-btn').style.display = view.configured ? '' : 'none';
+  },
+
+  async setupGmailSettings(user) {
+    const form = document.getElementById('gmail-settings-form');
+    if (!form) return;
+    try {
+      this.renderGmailStatus(await this.gmailApi(user, 'GET'));
+    } catch (err) {
+      document.getElementById('gmail-status').innerText = 'Could not load email settings. Is the server running?';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('gmail-save-btn');
+      const address = document.getElementById('gmail-address').value.trim();
+      const password = document.getElementById('gmail-app-password').value;
+      btn.disabled = true;
+      btn.innerText = 'Checking with Gmail…';
+      try {
+        const view = await this.gmailApi(user, 'PUT', { gmail_address: address, app_password: password });
+        document.getElementById('gmail-app-password').value = '';
+        this.renderGmailStatus(view);
+        App.showToast('Gmail connected', `Complaints will be sent from ${view.gmail_address}.`, 'success');
+      } catch (err) {
+        App.showToast('Could not connect Gmail', err.message, 'danger');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Save & verify';
+      }
+    });
+
+    document.getElementById('gmail-test-btn').addEventListener('click', async () => {
+      const res = await fetch(`${CONFIG.API_BASE}/api/email/test`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_id: user.id })
+      }).then(r => r.json()).catch(() => ({ ok: false, error: 'Server not reachable' }));
+      if (res.ok) App.showToast('Test email sent', `Check the inbox of ${res.to}.`, 'success');
+      else App.showToast('Test email failed', res.error, 'danger');
+    });
+
+    document.getElementById('gmail-remove-btn').addEventListener('click', async () => {
+      try {
+        this.renderGmailStatus(await this.gmailApi(user, 'DELETE'));
+        document.getElementById('gmail-address').value = '';
+        App.showToast('Gmail disconnected', 'Your complaints will no longer be sent from your Gmail.', 'info');
+      } catch (err) {
+        App.showToast('Could not disconnect', err.message, 'danger');
+      }
+    });
   },
 
   refreshHeader() {

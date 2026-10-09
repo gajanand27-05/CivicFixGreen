@@ -5,7 +5,7 @@ import base64
 import uuid
 from datetime import datetime, timezone
 
-from . import ai, emails, mailer, offices, reminders
+from . import accounts, ai, emails, mailer, offices, reminders
 
 STATUS_LABELS = {"open": "Open", "in_progress": "In Progress", "rejected": "Rejected", "resolved": "Closed"}
 CLOSED = {"resolved", "rejected"}
@@ -58,16 +58,33 @@ def _try_mail(store, cfg, issue_id, to, subject, body, **kw):
         return None
 
 
+def _mail_cfg(store, cfg, c):
+    """Send follow-ups for a complaint from the same account that sent it (user's Gmail or the shared one)."""
+    return accounts.cfg_for(store, cfg, c.get("sender_user_id")) if c.get("sender_user_id") else cfg
+
+
+def _already_processed(store, message_id):
+    """Remember handled reply Message-IDs so a reply seen in two monitored inboxes is processed once."""
+    meta = store.get("meta", "processed_mail") or {"id": "processed_mail", "ids": []}
+    if message_id in meta["ids"]:
+        return True
+    meta["ids"] = (meta["ids"] + [message_id])[-500:]
+    store.put("meta", meta)
+    return False
+
+
 def email_problem(cfg, to):
     """Why a complaint email can't be sent (None when it can)."""
     if not cfg.email_enabled:
-        return "Email is not set up on the server: add GMAIL_ADDRESS and GMAIL_APP_PASSWORD to server/.env and restart."
+        return "Email is not set up: connect your Gmail in Profile (or add GMAIL_ADDRESS and GMAIL_APP_PASSWORD to server/.env)."
     if not to:
         return "No office email address is configured: set DEMO_OFFICE_EMAIL in server/.env."
     return None
 
 
-def preview(cfg, issue):
+def preview(cfg, issue, store=None, user_id=None):
+    if store is not None:
+        cfg = accounts.cfg_for(store, cfg, user_id)
     office = offices.nearest(issue["lat"], issue["lng"])
     to = offices.recipient(office, cfg)
     return {"to": to, "office": office, "email_enabled": cfg.email_enabled and bool(to),
@@ -78,6 +95,8 @@ def preview(cfg, issue):
 
 def send_complaint(store, cfg, issue_id, complainer_email):
     issue = store.get("issues", issue_id)
+    has_own = accounts.public_view(store, issue.get("reporter_id"))["configured"]
+    cfg = accounts.cfg_for(store, cfg, issue.get("reporter_id"))  # send from the reporter's own Gmail if connected
     office = offices.nearest(issue["lat"], issue["lng"])
     to = offices.recipient(office, cfg)
     ticket = _next_ticket(store)
@@ -104,6 +123,8 @@ def send_complaint(store, cfg, issue_id, complainer_email):
         "sent_at": t, "message_id": message_id or "", "email_status": "sent" if message_id else "not_sent",
         "email_to": to if message_id else "", "email_cc": (complainer_email if message_id else ""),
         "email_error": email_error or "",
+        "sender_user_id": issue.get("reporter_id") if has_own else "",
+        "sender_email": cfg.gmail_address if message_id else "",
         "last_activity_at": t, "reminder_count": 0, "last_reminder_at": None, "replies": 0,
     }
     store.put("issues", issue)
@@ -129,6 +150,7 @@ def on_issue_changed(store, cfg, old, new):
            "success" if new["status"] == "resolved" else "info", new["id"])
     if not c.get("complainer_email"):
         return
+    cfg = _mail_cfg(store, cfg, c)
     if new["status"] == "resolved" and new.get("after_photo_url"):
         try:
             attachments = [_photo(new, ticket, "after_photo_url")]
@@ -153,6 +175,9 @@ def handle_reply(store, cfg, msg):
     if not c.get("office_email") or offices.normalize_addr(msg["from"]) != offices.normalize_addr(c["office_email"]):
         add_event(store, issue["id"], "commented", f"Email from {msg['from']} ignored (not the assigned office).")
         return "not_from_office"
+    if _already_processed(store, msg.get("message_id", "")):
+        return "duplicate"
+    ai_cfg, cfg = cfg, _mail_cfg(store, cfg, c)
 
     c["replies"] = c.get("replies", 0) + 1
     c["last_activity_at"] = now_iso()
@@ -173,7 +198,7 @@ def handle_reply(store, cfg, msg):
 
     mime, data = msg["images"][0]
     after_url = f"data:{mime};base64,{base64.b64encode(data).decode()}"
-    v = ai.verify_cleanup(cfg, issue["before_photo_url"], after_url)
+    v = ai.verify_cleanup(ai_cfg, issue["before_photo_url"], after_url)
     add_event(store, issue["id"], "cleanup_checked",
               f"Cleanup photo check: {v['reason']} (confidence {round(v['confidence'] * 100)}%)", "system")
 
@@ -204,6 +229,7 @@ def check_reminders(store, cfg, now):
         if not reminders.is_reminder_due(issue, now, cfg):
             continue
         c = issue["complaint"]
+        mcfg = _mail_cfg(store, cfg, c)
         ticket, n = c["ticket_id"], c.get("reminder_count", 0) + 1
         days = max(1, (now - reminders.ts(c["sent_at"])).days)
 
@@ -212,11 +238,11 @@ def check_reminders(store, cfg, now):
                 attachments = [_photo(issue, ticket)]
             except Exception:
                 attachments = []
-            _try_mail(store, cfg, issue["id"], c["office_email"], f"REMINDER {n}: {emails.complaint_subject(ticket, issue)}",
+            _try_mail(store, mcfg, issue["id"], c["office_email"], f"REMINDER {n}: {emails.complaint_subject(ticket, issue)}",
                       emails.reminder_officer(ticket, issue, n, days), attachments=attachments,
                       in_reply_to=c.get("message_id") or None)
         if c.get("complainer_email"):
-            _try_mail(store, cfg, issue["id"], c["complainer_email"], f"[{ticket}] Reminder {n} sent to {c['office_name']}",
+            _try_mail(store, mcfg, issue["id"], c["complainer_email"], f"[{ticket}] Reminder {n} sent to {c['office_name']}",
                       emails.reminder_citizen(ticket, issue, c["office_name"], n, days))
 
         c["reminder_count"] = n

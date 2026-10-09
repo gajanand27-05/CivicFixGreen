@@ -56,6 +56,14 @@ Do **not** use `--reload`: it starts the background monitor twice.
 | `REMINDER_AFTER_MINUTES` / `REMINDER_REPEAT_MINUTES` / `MAX_REMINDERS` | 7200 (5 days) / 2880 (2 days) / 3. Use e.g. 2 / 3 for a live demo |
 | `POLL_SECONDS` | how often replies and reminders are checked (default 60) |
 
+### Email per user (Profile → Email sending)
+Each user can connect their own Gmail (address + 16-character App Password, with 2-Step Verification and IMAP on).
+Their complaints are then emailed **from their own address**, and the server also reads their inbox for the office's reply.
+The login is verified with Gmail when saved. The App Password is stored only in the server's private `mail_accounts`
+table (in `server/ecosort.db`, git-ignored): it is never sent back to the browser and is not readable through `/api/db`.
+Users without their own Gmail fall back to the shared `GMAIL_*` account in `.env`, or in-app tracking only.
+Test it: Profile → Email sending → "Send test email", or `POST /api/email/test`.
+
 ### Tests
 ```bash
 python -m pytest server/tests -q

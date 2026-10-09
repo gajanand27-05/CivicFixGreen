@@ -4,17 +4,17 @@ import threading
 import time
 from datetime import datetime, timezone
 
-from . import complaints, inbox
+from . import accounts, complaints, inbox
 
 
 def run_once(store, cfg):
-    if cfg.email_enabled:
+    for box in accounts.inbox_configs(store, cfg):   # shared account + every user who connected Gmail
         try:
-            for msg in inbox.fetch_unseen(cfg):
+            for msg in inbox.fetch_unseen(box):
                 result = complaints.handle_reply(store, cfg, msg)
-                print(f"[jobs] reply {msg['ticket_id']} from {msg['from']}: {result}")
+                print(f"[jobs] {box.gmail_address}: reply {msg['ticket_id']} from {msg['from']}: {result}")
         except Exception as e:
-            print("[jobs] inbox check failed:", e)
+            print(f"[jobs] inbox check failed for {box.gmail_address}:", e)
     sent = complaints.check_reminders(store, cfg, datetime.now(timezone.utc))
     if sent:
         print(f"[jobs] sent {sent} reminder(s)")

@@ -852,7 +852,7 @@ const ReportPage = {
     const esc = s => String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
     try {
       const res = await fetch(`${CONFIG.API_BASE}/api/complaints/preview`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ issue: this.buildIssueDraft() })
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ issue: this.buildIssueDraft(), user_id: (Auth.getCurrentUser() || {}).id })
       });
       const p = await res.json();
       card.innerHTML = `

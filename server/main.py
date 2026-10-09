@@ -8,7 +8,7 @@ from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import ai, complaints, config, jobs, mailer, offices
+from . import accounts, ai, complaints, config, jobs, mailer, offices
 from .store import Store
 
 cfg = config.load()
@@ -108,14 +108,15 @@ def api_status():
 
 @app.post("/api/email/test")
 def api_email_test(body: dict = Body(default={})):
-    """Send a test email so the team can confirm the Gmail setup works."""
-    to = (body.get("to") or cfg.demo_office_email or cfg.gmail_address).strip()
-    problem = complaints.email_problem(cfg, to)
+    """Send a test email (from a user's connected Gmail if user_id is given) to confirm the setup works."""
+    send_cfg = accounts.cfg_for(store, cfg, body.get("user_id"))
+    to = (body.get("to") or send_cfg.gmail_address or cfg.demo_office_email).strip()
+    problem = complaints.email_problem(send_cfg, to)
     if problem:
         return {"ok": False, "error": problem}
     try:
-        mailer.send(cfg, to, "EcoSort test email", "If you can read this, EcoSort email is working.")
-        return {"ok": True, "to": to, "from": cfg.gmail_address}
+        mailer.send(send_cfg, to, "EcoSort test email", "If you can read this, EcoSort email is working.")
+        return {"ok": True, "to": to, "from": send_cfg.gmail_address}
     except Exception as e:
         return {"ok": False, "error": f"Sending failed: {e}"}
 
@@ -129,7 +130,35 @@ def api_nearest(lat: float = Query(...), lng: float = Query(...)):
 
 @app.post("/api/complaints/preview")
 def api_preview(body: dict = Body(...)):
-    return complaints.preview(cfg, body["issue"])
+    return complaints.preview(cfg, body["issue"], store, body.get("user_id"))
+
+
+# ---------- per-user Gmail (App Password is write-only: never returned) ----------
+def _check_user(user_id):
+    if not store.get("users", user_id):
+        raise HTTPException(404, "User not found")
+
+
+@app.get("/api/users/{user_id}/email-settings")
+def api_email_settings(user_id: str):
+    _check_user(user_id)
+    return accounts.public_view(store, user_id)
+
+
+@app.put("/api/users/{user_id}/email-settings")
+def api_save_email_settings(user_id: str, body: dict = Body(...)):
+    _check_user(user_id)
+    try:
+        return accounts.save(store, cfg, user_id, body.get("gmail_address", ""), body.get("app_password", ""))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.delete("/api/users/{user_id}/email-settings")
+def api_delete_email_settings(user_id: str):
+    _check_user(user_id)
+    accounts.delete(store, user_id)
+    return accounts.public_view(store, user_id)
 
 
 @app.post("/api/complaints/{issue_id}/send")

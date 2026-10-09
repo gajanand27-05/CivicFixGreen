@@ -4,6 +4,12 @@ from email.message import EmailMessage
 from email.utils import make_msgid
 
 
+def verify_login(cfg):
+    """Raise if Gmail does not accept this address + App Password."""
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as s:
+        s.login(cfg.gmail_address, cfg.gmail_app_password)
+
+
 def send(cfg, to, subject, body, cc=None, attachments=(), in_reply_to=None):
     msg = EmailMessage()
     msg["From"] = f"EcoSort <{cfg.gmail_address}>"
