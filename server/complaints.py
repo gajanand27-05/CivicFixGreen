@@ -5,7 +5,7 @@ import base64
 import uuid
 from datetime import datetime, timezone
 
-from . import accounts, ai, emails, mailer, offices, reminders
+from . import accounts, ai, emails, mailer, offices, photos, reminders
 
 STATUS_LABELS = {"open": "Open", "in_progress": "In Progress", "rejected": "Rejected", "resolved": "Closed"}
 CLOSED = {"resolved", "rejected"}
@@ -197,7 +197,7 @@ def handle_reply(store, cfg, msg):
         return "in_progress"
 
     mime, data = msg["images"][0]
-    after_url = f"data:{mime};base64,{base64.b64encode(data).decode()}"
+    after_url = photos.save_bytes(mime, data) if photos._store is not None else f"data:{mime};base64,{base64.b64encode(data).decode()}"
     v = ai.verify_cleanup(ai_cfg, issue["before_photo_url"], after_url)
     add_event(store, issue["id"], "cleanup_checked",
               f"Cleanup photo check: {v['reason']} (confidence {round(v['confidence'] * 100)}%)", "system")

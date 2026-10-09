@@ -193,7 +193,7 @@ const HomePage = {
       <article class="es-card" onclick="HomePage.openIssueDetails('${issue.id}')" tabindex="0"
         onkeydown="if (event.key === 'Enter') HomePage.openIssueDetails('${issue.id}')">
         <div class="es-card-media">
-          <img src="${(issue.media_urls && issue.media_urls[0]) || 'assets/icon.svg'}" loading="lazy" alt="">
+          <img src="${(issue.media_urls && issue.media_urls[0]) || 'assets/ecosort-icon-192.png'}" loading="lazy" alt="">
           <span class="es-status es-status-${issue.status}">${Green.statusLabel(issue.status)}</span>
         </div>
         <div class="es-card-body">
@@ -348,7 +348,7 @@ const HomePage = {
           ${issue.description ? `<p class="es-modal-desc">${homeEsc(issue.description)}</p>` : ''}
           <p class="es-modal-address"><i data-lucide="map-pin"></i> ${homeEsc(issue.address || issue.ward || '')}</p>
           <div class="es-reporter">
-            <img src="${reporter ? reporter.avatar_url : 'assets/icon.svg'}" alt="">
+            <img src="${reporter ? reporter.avatar_url : 'assets/ecosort-icon-192.png'}" alt="">
             <span>Reported by <strong>${homeEsc(reporter ? reporter.name : 'a citizen')}</strong> · ${App.formatTimeAgo(issue.created_at)}</span>
           </div>
         </div>
@@ -378,7 +378,7 @@ const HomePage = {
               const commenter = users.find(u => u.id === cm.user_id);
               return `
                 <div class="es-comment">
-                  <img src="${commenter ? commenter.avatar_url : 'assets/icon.svg'}" alt="">
+                  <img src="${commenter ? commenter.avatar_url : 'assets/ecosort-icon-192.png'}" alt="">
                   <div class="es-comment-bubble">
                     <div class="es-comment-meta"><strong>${homeEsc(commenter ? commenter.name : 'Citizen')}</strong><span>${App.formatTimeAgo(cm.created_at)}</span></div>
                     <div>${homeEsc(cm.content)}</div>

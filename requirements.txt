@@ -1,0 +1,5 @@
+# Runtime dependencies for the Vercel deployment (local dev uses server/requirements.txt)
+fastapi==0.115.*
+requests==2.32.*
+python-dotenv==1.0.*
+psycopg[binary]==3.2.*

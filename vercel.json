@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index" }
+  ],
+  "functions": {
+    "api/index.py": { "maxDuration": 60, "excludeFiles": "{.venv/**,server/tests/**,**/__pycache__/**,server/*.db}" }
+  },
+  "crons": [
+    { "path": "/api/cron/tick", "schedule": "0 3 * * *" }
+  ],
+  "headers": [
+    { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+  ]
+}

@@ -5,6 +5,8 @@ import json
 
 import requests
 
+from . import photos
+
 LABELS = {
     "illegal_dumping": "Illegal Garbage Dump",
     "overflowing_bin": "Overflowing Bin / Black Spot",
@@ -82,6 +84,8 @@ def normalize_analysis(raw, is_mock=False):
 
 
 def data_url_to_bytes(url):
+    if url.startswith(photos.PREFIX):
+        return photos.load(url[len(photos.PREFIX):])
     if url.startswith("data:"):
         header, b64 = url.split(",", 1)
         return header[5:].split(";")[0], base64.b64decode(b64)

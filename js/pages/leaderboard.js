@@ -69,7 +69,7 @@ const LeaderboardPage = {
       return `
         <li class="es-lb-row ${isMe ? 'is-me' : ''} ${idx < 3 ? 'is-top' : ''}">
           <span class="es-lb-rank">${idx < 3 ? medals[idx] : idx + 1}</span>
-          <img src="${esc(u.avatar_url || 'assets/icon.svg')}" class="es-lb-avatar" alt="">
+          <img src="${esc(u.avatar_url || 'assets/ecosort-icon-192.png')}" class="es-lb-avatar" alt="">
           <span class="es-lb-name">${esc(u.name)}${isMe ? ' <span class="es-lb-you">You</span>' : ''}</span>
           <span class="es-lb-points"><strong>${u.displayPoints.toLocaleString('en-IN')}</strong> pts</span>
         </li>`;
@@ -80,7 +80,7 @@ const LeaderboardPage = {
       const me = sortedUsers[myIdx];
       myRankContainer.innerHTML = `
         <span class="es-lb-me-rank">#${myIdx + 1}</span>
-        <img src="${esc(me.avatar_url || 'assets/icon.svg')}" class="es-lb-avatar" alt="">
+        <img src="${esc(me.avatar_url || 'assets/ecosort-icon-192.png')}" class="es-lb-avatar" alt="">
         <div class="es-lb-me-info">
           <span class="es-lb-me-label">Your rank of ${sortedUsers.length}</span>
           <span class="es-lb-name">${esc(me.name)}</span>

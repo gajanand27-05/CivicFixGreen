@@ -1,0 +1,9 @@
+.venv
+**/__pycache__
+.pytest_cache
+server/.env
+server/*.db
+server/tests
+walkthrough.md
+Dockerfile
+nginx.conf

@@ -1,19 +1,22 @@
 # server/main.py
 # EcoSort server: shared DB, AI, complaints (email optional), monitoring jobs, and the frontend.
 # Run from the repo root:  uvicorn server.main:app --port 8000   (no --reload: it would start the jobs twice)
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import Body, FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi import Body, FastAPI, Header, HTTPException, Query
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from . import accounts, ai, complaints, config, jobs, mailer, offices
-from .store import Store
+from . import accounts, ai, complaints, config, jobs, mailer, offices, photos
+from .store import open_store
 
 cfg = config.load()
 ROOT = Path(__file__).resolve().parent.parent
-store = Store(ROOT / "server" / "ecosort.db")
+ON_VERCEL = bool(os.environ.get("VERCEL"))
+store = open_store(ROOT / "server" / "ecosort.db")
+photos.init(store)
 
 STORES = {"users", "issues", "verifications", "issue_timeline", "badges",
           "hotspot_predictions", "monthly_reports", "notifications", "meta"}
@@ -25,7 +28,8 @@ async def lifespan(app):
     print(f"[ecosort] AI: {'Gemini ' + cfg.gemini_model if cfg.gemini_api_key else 'DEMO MODE (no GEMINI_API_KEY)'}")
     print(f"[ecosort] Email: {'ON via ' + cfg.gmail_address if cfg.email_enabled else 'OFF (complaints tracked in-app only)'}")
     print(f"[ecosort] Reminders after {cfg.reminder_after}, repeat every {cfg.reminder_repeat}, max {cfg.max_reminders}")
-    jobs.start(store, cfg)
+    if not ON_VERCEL:
+        jobs.start(store, cfg)   # serverless hosts can't keep a thread alive: see maybe_tick / /api/cron/tick
     yield
 
 
@@ -41,6 +45,8 @@ def _check(name):
 @app.get("/api/db/{name}")
 def db_get_all(name: str):
     _check(name)
+    if name == "notifications" and ON_VERCEL:
+        jobs.maybe_tick(store, cfg)   # every open app polls this ~15 s, which drives replies/reminders on Vercel
     return store.get_all(name)
 
 
@@ -54,6 +60,8 @@ def db_get(name: str, doc_id: str):
 def db_put(name: str, doc_id: str, doc: dict = Body(...)):
     _check(name)
     doc["id"] = doc_id
+    if name in ("issues", "users"):
+        photos.externalize(doc)       # keep records small: images become /api/photos/<id>
     old = store.get(name, doc_id) if name == "issues" else None
     store.put(name, doc)
     if name == "issues" and old:
@@ -168,11 +176,30 @@ def api_send(issue_id: str, body: dict = Body(...)):
     return complaints.send_complaint(store, cfg, issue_id, body.get("complainer_email", ""))
 
 
-# ---------- frontend (only whitelisted files; never serve server/) ----------
-app.mount("/js", StaticFiles(directory=ROOT / "js"), name="js")
-app.mount("/assets", StaticFiles(directory=ROOT / "assets"), name="assets")
-(ROOT / "css").mkdir(exist_ok=True)
-app.mount("/css", StaticFiles(directory=ROOT / "css"), name="css")
+@app.get("/api/photos/{photo_id}")
+def api_photo(photo_id: str):
+    try:
+        mime, data = photos.load(photo_id)
+    except KeyError:
+        raise HTTPException(404, "Photo not found")
+    return Response(content=data, media_type=mime, headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
+
+@app.get("/api/cron/tick")
+def api_cron_tick(authorization: str = Header(default="")):
+    """Vercel Cron entry point: check BBMP replies and send due reminders."""
+    secret = os.environ.get("CRON_SECRET")
+    if secret and authorization != f"Bearer {secret}":
+        raise HTTPException(401, "Unauthorized")
+    jobs.run_once(store, cfg)
+    return {"ok": True}
+
+
+# ---------- frontend for local runs (on Vercel the static files are served by the platform) ----------
+if not ON_VERCEL:
+    app.mount("/js", StaticFiles(directory=ROOT / "js"), name="js")
+    app.mount("/assets", StaticFiles(directory=ROOT / "assets"), name="assets")
+    app.mount("/css", StaticFiles(directory=ROOT / "css"), name="css")
 
 
 @app.get("/")

@@ -15,7 +15,7 @@ const ProfilePage = {
         <div class="profile-card card">
           <div class="profile-header-info">
             <div class="pf-avatar">
-              <img src="${user.avatar_url || 'assets/icon.svg'}" id="profile-avatar-preview" class="profile-big-avatar" alt="Profile photo">
+              <img src="${user.avatar_url || 'assets/ecosort-icon-192.png'}" id="profile-avatar-preview" class="profile-big-avatar" alt="Profile photo">
               <label class="pf-avatar-btn" title="Change photo">
                 <i data-lucide="camera"></i>
                 <input type="file" id="avatar-file-input" accept="image/*" hidden>

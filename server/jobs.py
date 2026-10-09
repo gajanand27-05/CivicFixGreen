@@ -20,6 +20,20 @@ def run_once(store, cfg):
         print(f"[jobs] sent {sent} reminder(s)")
 
 
+def maybe_tick(store, cfg):
+    """Run the monitor at most once per POLL_SECONDS, triggered by requests (serverless mode)."""
+    now = datetime.now(timezone.utc)
+    meta = store.get("meta", "last_tick") or {"id": "last_tick", "at": None}
+    if meta["at"] and (now - datetime.fromisoformat(meta["at"])).total_seconds() < cfg.poll_seconds:
+        return False
+    store.put("meta", {"id": "last_tick", "at": now.isoformat()})
+    try:
+        run_once(store, cfg)
+    except Exception as e:
+        print("[jobs] tick error:", e)
+    return True
+
+
 def start(store, cfg):
     def loop():
         while True:
