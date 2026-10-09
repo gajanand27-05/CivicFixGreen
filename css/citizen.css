@@ -50,22 +50,58 @@
 .es-home { width: 100%; display: flex; flex-direction: column; gap: clamp(20px, 3vw, 32px); }
 
 .es-hero {
-  background: linear-gradient(135deg, #F2F8F3 0%, #FFFFFF 60%);
+  background: var(--es-surface);
   border: 1px solid var(--es-border);
   border-radius: 24px;
-  padding: clamp(24px, 5vw, 56px) clamp(18px, 5vw, 56px);
+  overflow: hidden;
   text-align: center;
 }
+/* Full-width Bengaluru banner: white fade on the left keeps the text readable, city stays visible on the right */
+.es-hero-banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: clamp(320px, 26vw, 360px);
+  padding: clamp(24px, 3vw, 36px) clamp(20px, 5vw, 56px);
+  background-color: #EAF3EC;
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 255, 255, 0.9) 32%, rgba(255, 255, 255, 0.55) 52%, rgba(255, 255, 255, 0) 72%),
+    url('../assets/bengaluru-hero.jpg');
+  background-size: cover;
+  background-position: center 38%;
+  text-align: left;
+}
+.es-hero-content { position: relative; max-width: min(560px, 100%); }
+.es-hero-eyebrow {
+  display: inline-block; margin-bottom: 12px; padding: 5px 12px; border-radius: 999px;
+  background: rgba(30, 123, 52, 0.1); color: var(--es-primary);
+  font-size: 0.75rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+}
 .es-hero-title {
-  font-size: clamp(1.6rem, 4.2vw, 2.6rem); line-height: 1.15; font-weight: 800;
-  color: var(--es-text); margin: 0 auto 12px; max-width: 18ch; letter-spacing: -0.02em;
+  font-size: clamp(1.7rem, 3.6vw, 2.75rem); line-height: 1.12; font-weight: 800;
+  color: var(--es-text); margin: 0 0 12px; max-width: 16ch; letter-spacing: -0.02em;
 }
 .es-hero-text {
-  font-size: clamp(0.98rem, 1.6vw, 1.12rem); color: var(--es-muted);
-  max-width: 54ch; margin: 0 auto 24px; line-height: 1.55;
+  font-size: clamp(0.98rem, 1.5vw, 1.1rem); color: var(--es-muted);
+  max-width: 46ch; margin: 0 0 24px; line-height: 1.55;
 }
-.es-hero-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.es-hero-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-start; }
 .es-hero-actions .btn svg { width: 18px; height: 18px; }
+.es-hero-actions .btn-outline { background: rgba(255, 255, 255, 0.92); }
+.es-hero .es-stats { padding: 0 clamp(12px, 3vw, 24px) clamp(14px, 2.5vw, 22px); }
+
+/* Phones/tablets: fade from the top instead, so the text never sits on a busy part of the photo */
+@media (max-width: 768px) {
+  .es-hero-banner {
+    min-height: 0;
+    align-items: flex-start;
+    padding-bottom: clamp(140px, 38vw, 220px);
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 255, 255, 0.9) 45%, rgba(255, 255, 255, 0.35) 70%, rgba(255, 255, 255, 0) 88%),
+      url('../assets/bengaluru-hero.jpg');
+    background-position: center 70%;
+  }
+}
 
 .es-stats {
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;

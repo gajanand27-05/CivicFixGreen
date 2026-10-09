@@ -32,15 +32,20 @@ const HomePage = {
     return `
       <div class="es-home">
         <section class="es-hero">
-          <h1 class="es-hero-title">Spotted a garbage dump? Report it in a minute.</h1>
-          <p class="es-hero-text">Snap a photo and we'll raise a complaint with the nearest BBMP office, then follow up until the spot is clean.</p>
-          <div class="es-hero-actions">
-            <button class="btn btn-primary es-btn-lg" onclick="Router.navigate('#/report')">
-              <i data-lucide="camera"></i> Report a Garbage Dump
-            </button>
-            <button class="btn btn-outline es-btn-lg" onclick="Router.navigate('#/map')">
-              <i data-lucide="map"></i> View Map
-            </button>
+          <div class="es-hero-banner">
+            <div class="es-hero-content">
+              <span class="es-hero-eyebrow">Cleaner Bengaluru Together</span>
+              <h1 class="es-hero-title">Spot Waste. Report. Track. Change.</h1>
+              <p class="es-hero-text">Snap a photo and we'll raise a complaint with the nearest BBMP office, then follow up until the spot is clean.</p>
+              <div class="es-hero-actions">
+                <button class="btn btn-primary es-btn-lg" onclick="Router.navigate('#/report')">
+                  <i data-lucide="camera"></i> Report a Garbage Dump
+                </button>
+                <button class="btn btn-outline es-btn-lg" onclick="Router.navigate('#/map')">
+                  <i data-lucide="map"></i> View City Map
+                </button>
+              </div>
+            </div>
           </div>
           <div class="es-stats">
             <div class="es-stat"><span class="es-stat-val" id="hero-stat-total">0</span><span class="es-stat-label">Dumps reported</span></div>
