@@ -859,12 +859,15 @@ const ReportPage = {
         <div class="es-summary-top">
           <img src="${this.mediaFiles[0].dataUrl}" alt="Your photo" class="es-summary-photo">
           <dl class="es-summary-list">
-            <div><dt>${p.email_enabled ? 'To' : 'Office'}</dt>
-              <dd>${p.email_enabled ? `${esc(p.office.name)} <span class="es-hint">(${esc(p.to)})</span>` : `${esc(p.office.name)} <span class="es-hint">(tracked in app)</span>`}</dd></div>
+            <div><dt>Office</dt><dd>${esc(p.office.name)}</dd></div>
+            <div><dt>Email to</dt><dd>${p.email_enabled ? `<strong>${esc(p.to)}</strong>` : '<span class="es-hint">Not emailed (tracked in the app)</span>'}</dd></div>
+            ${p.email_enabled ? `<div><dt>Copy to you</dt><dd>${esc(document.getElementById('complainer-email').value.trim()) || '<span class="es-hint">No email entered (add one in the previous step to get a copy)</span>'}</dd></div>
+            <div><dt>Sent from</dt><dd>${esc(p.sender)}</dd></div>` : ''}
             <div><dt>Subject</dt><dd>${esc(p.subject)}</dd></div>
             <div><dt>Location</dt><dd>${esc(this.locationData.address)}</dd></div>
           </dl>
         </div>
+        ${p.email_problem ? `<div class="es-banner es-banner-warn"><span>📧 Email will not be sent: ${esc(p.email_problem)}</span></div>` : ''}
         <details class="es-letter" open>
           <summary>Complaint letter</summary>
           <pre>${esc(p.body)}</pre>
@@ -1132,7 +1135,10 @@ const ReportPage = {
         </div>
 
         ${c ? `<p class="es-thanks-ticket" id="success-issue-id"><span class="es-chip es-chip-ticket">${esc(c.ticket_id)}</span>
-          ${c.email_status === 'sent' ? 'Emailed to' : 'Registered with'} ${esc(c.office_name)}</p>` : ''}
+          ${c.email_status === 'sent' ? 'Emailed to' : 'Registered with'} ${esc(c.office_name)}</p>
+          <p class="es-thanks-email" id="success-email-line">${c.email_status === 'sent'
+            ? `📧 Sent to <strong>${esc(c.email_to)}</strong>${c.email_cc ? ` · copy to <strong>${esc(c.email_cc)}</strong>` : ''}`
+            : `📧 Email not sent: ${esc(c.email_error || 'email is not set up')}`}</p>` : ''}
 
         <div class="es-thanks-actions">
           <button class="btn btn-primary" id="success-close-btn"><i data-lucide="home"></i> Back to Home</button>

@@ -35,3 +35,8 @@ def test_recipient_empty_when_nothing_configured():
 
 def test_normalize_addr_strips_plus_tag_and_case():
     assert offices.normalize_addr("Team.Officer+bbmp-a@Gmail.com") == "team.officer@gmail.com"
+
+
+def test_recipient_falls_back_to_sender_account():
+    cfg = SimpleNamespace(send_to_real_bbmp=False, demo_office_email="", gmail_address="sys@gmail.com")
+    assert offices.recipient(OFF[0], cfg) == "sys+bbmp-a@gmail.com"

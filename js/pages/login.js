@@ -61,13 +61,13 @@ const LoginPage = {
           <div class="demo-accounts-box">
             <span class="demo-title">Quick demo login</span>
             <div class="demo-btn-group">
-              <button type="button" class="btn btn-xs btn-outline demo-login-btn" data-email="citizen@ecosort.gov" data-pass="citizen123">
+              <button type="button" class="btn btn-xs btn-outline demo-login-btn" data-user-id="citizen_1" data-email="citizen@ecosort.gov" data-pass="citizen123">
                 <i data-lucide="user"></i> Citizen
               </button>
-              <button type="button" class="btn btn-xs btn-outline demo-login-btn" data-email="officer@ecosort.gov" data-pass="officer123">
+              <button type="button" class="btn btn-xs btn-outline demo-login-btn" data-user-id="officer_1" data-email="officer@ecosort.gov" data-pass="officer123">
                 <i data-lucide="shield"></i> BBMP Officer
               </button>
-              <button type="button" class="btn btn-xs btn-outline demo-login-btn" data-email="admin@ecosort.gov" data-pass="admin123">
+              <button type="button" class="btn btn-xs btn-outline demo-login-btn" data-user-id="admin_1" data-email="admin@ecosort.gov" data-pass="admin123">
                 <i data-lucide="settings"></i> Admin
               </button>
             </div>
@@ -249,7 +249,9 @@ const LoginPage = {
         if (emailField) emailField.value = email;
         if (passField) passField.value = pass;
         try {
-          const user = await Auth.login(email, pass, true);
+          // Demo accounts sign in by id, so they still work after the email is changed in Profile
+          const demo = await DB.get('users', btn.getAttribute('data-user-id'));
+          const user = demo ? await Auth.login(demo.email, demo.password_hash, true) : await Auth.login(email, pass, true);
           App.addNotification(`Welcome, ${user.name}!`, '', 'success');
           Router.redirectToRoleDashboard(user);
         } catch (err) {

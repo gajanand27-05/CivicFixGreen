@@ -25,9 +25,10 @@ def recipient(office, cfg):
     """Real official address only when explicitly enabled; otherwise the team's demo inbox ("" if none)."""
     if cfg.send_to_real_bbmp and office.get("email_official"):
         return office["email_official"]
-    if not cfg.demo_office_email:
+    base = cfg.demo_office_email or getattr(cfg, "gmail_address", "")  # single-account demo: route to the sender inbox
+    if not base:
         return ""
-    user, domain = cfg.demo_office_email.split("@")
+    user, domain = base.split("@")
     return f"{user}+bbmp-{office['id']}@{domain}"
 
 

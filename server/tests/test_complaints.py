@@ -145,3 +145,46 @@ def test_reply_with_bad_photo_stays_open(tmp_path, monkeypatch):
     monkeypatch.setattr(complaints.ai, "verify_cleanup", lambda *a: {"is_resolved": False, "confidence": 0.2, "reason": "selfie", "is_mock": False})
     assert complaints.handle_reply(store, cfg(email=True), _reply("ECO-0001", images=[("image/jpeg", b"x")])) == "photo_rejected"
     assert store.get("issues", "i1")["status"] == "open"
+
+
+def test_not_configured_reason_is_recorded(tmp_path):
+    store = Store(tmp_path / "t.db")
+    seed_issue(store)
+    c = complaints.send_complaint(store, cfg(email=False), "i1", "")
+    assert c["email_status"] == "not_sent"
+    assert "GMAIL_ADDRESS" in c["email_error"]
+
+
+def test_send_failure_reason_is_recorded(tmp_path, monkeypatch):
+    store = Store(tmp_path / "t.db")
+    seed_issue(store)
+
+    def boom(*a, **kw):
+        raise OSError("535 bad credentials")
+
+    monkeypatch.setattr(complaints.mailer, "send", boom)
+    c = complaints.send_complaint(store, cfg(email=True), "i1", "")
+    assert "535 bad credentials" in c["email_error"]
+
+
+def test_sent_records_to_and_cc(tmp_path, monkeypatch):
+    store = Store(tmp_path / "t.db")
+    seed_issue(store)
+    monkeypatch.setattr(complaints.mailer, "send", lambda *a, **kw: "<m@x>")
+    c = complaints.send_complaint(store, cfg(email=True), "i1", "me@example.com")
+    assert c["email_to"] == "team.officer+bbmp-east@gmail.com" and c["email_cc"] == "me@example.com"
+    assert c["email_error"] == ""
+
+
+def test_single_account_mode_accepts_human_reply_but_ignores_own_system_mail(tmp_path, monkeypatch):
+    store = Store(tmp_path / "t.db")
+    seed_issue(store)
+    monkeypatch.setattr(complaints.mailer, "send", lambda *a, **kw: "<m@x>")
+    single = cfg(email=True, demo_office_email="")          # office mail falls back to the sender account
+    c = complaints.send_complaint(store, single, "i1", "")
+    assert c["office_email"] == "sys+bbmp-east@gmail.com"
+    own_system_copy = {"from": "sys@gmail.com", "subject": "[ECO-0001] Garbage", "ticket_id": "ECO-0001",
+                       "text": "", "images": [], "message_id": "<123@ecosort.app>"}
+    assert complaints.handle_reply(store, single, own_system_copy) == "ignored"
+    human_reply = {**own_system_copy, "subject": "Re: [ECO-0001] Garbage", "text": "On it", "message_id": "<abc@mail.gmail.com>"}
+    assert complaints.handle_reply(store, single, human_reply) == "in_progress"

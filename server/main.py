@@ -8,7 +8,7 @@ from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import ai, complaints, config, jobs, offices
+from . import ai, complaints, config, jobs, mailer, offices
 from .store import Store
 
 cfg = config.load()
@@ -102,7 +102,22 @@ def api_transcribe(body: dict = Body(...)):
 # ---------- offices & complaints ----------
 @app.get("/api/status")
 def api_status():
-    return {"ai": bool(cfg.gemini_api_key), "email": cfg.email_enabled}
+    return {"ai": bool(cfg.gemini_api_key), "email": cfg.email_enabled, "sender": cfg.gmail_address,
+            "office_inbox": cfg.demo_office_email or cfg.gmail_address, "real_bbmp": cfg.send_to_real_bbmp}
+
+
+@app.post("/api/email/test")
+def api_email_test(body: dict = Body(default={})):
+    """Send a test email so the team can confirm the Gmail setup works."""
+    to = (body.get("to") or cfg.demo_office_email or cfg.gmail_address).strip()
+    problem = complaints.email_problem(cfg, to)
+    if problem:
+        return {"ok": False, "error": problem}
+    try:
+        mailer.send(cfg, to, "EcoSort test email", "If you can read this, EcoSort email is working.")
+        return {"ok": True, "to": to, "from": cfg.gmail_address}
+    except Exception as e:
+        return {"ok": False, "error": f"Sending failed: {e}"}
 
 
 @app.get("/api/offices/nearest")

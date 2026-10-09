@@ -58,10 +58,20 @@ def _try_mail(store, cfg, issue_id, to, subject, body, **kw):
         return None
 
 
+def email_problem(cfg, to):
+    """Why a complaint email can't be sent (None when it can)."""
+    if not cfg.email_enabled:
+        return "Email is not set up on the server: add GMAIL_ADDRESS and GMAIL_APP_PASSWORD to server/.env and restart."
+    if not to:
+        return "No office email address is configured: set DEMO_OFFICE_EMAIL in server/.env."
+    return None
+
+
 def preview(cfg, issue):
     office = offices.nearest(issue["lat"], issue["lng"])
     to = offices.recipient(office, cfg)
     return {"to": to, "office": office, "email_enabled": cfg.email_enabled and bool(to),
+            "email_problem": email_problem(cfg, to) or "", "sender": cfg.gmail_address,
             "subject": emails.complaint_subject("ECO-XXXX", issue),
             "body": emails.complaint_body("ECO-XXXX", {**issue, "id": issue.get("id", "new")}, office, cfg)}
 
@@ -72,22 +82,28 @@ def send_complaint(store, cfg, issue_id, complainer_email):
     to = offices.recipient(office, cfg)
     ticket = _next_ticket(store)
 
-    message_id = None
-    if cfg.email_enabled and to:
+    message_id, email_error = None, email_problem(cfg, to)
+    if not email_error:
         try:
             attachments = [_photo(issue, ticket)]
         except Exception as e:
             attachments = []
             add_event(store, issue_id, "email_failed", f"Photo could not be attached: {e}")
-        message_id = _try_mail(store, cfg, issue_id, to, emails.complaint_subject(ticket, issue),
-                               emails.complaint_body(ticket, issue, office, cfg),
-                               cc=complainer_email or None, attachments=attachments)
+        try:
+            message_id = mailer.send(cfg, to, emails.complaint_subject(ticket, issue),
+                                     emails.complaint_body(ticket, issue, office, cfg),
+                                     cc=complainer_email or None, attachments=attachments)
+        except Exception as e:
+            email_error = f"Sending failed: {e}"
+            add_event(store, issue_id, "email_failed", f"Complaint email to {to} not sent: {e}")
 
     t = now_iso()
     issue["complaint"] = {
         "ticket_id": ticket, "office_id": office["id"], "office_name": office["name"], "office_email": to,
         "officer_user_id": office["officer_user_id"], "complainer_email": complainer_email,
         "sent_at": t, "message_id": message_id or "", "email_status": "sent" if message_id else "not_sent",
+        "email_to": to if message_id else "", "email_cc": (complainer_email if message_id else ""),
+        "email_error": email_error or "",
         "last_activity_at": t, "reminder_count": 0, "last_reminder_at": None, "replies": 0,
     }
     store.put("issues", issue)
@@ -127,7 +143,8 @@ def on_issue_changed(store, cfg, old, new):
 
 
 def handle_reply(store, cfg, msg):
-    if not msg["ticket_id"] or offices.normalize_addr(msg["from"]) == offices.normalize_addr(cfg.gmail_address):
+    # skip mail without a ticket and the system's own outgoing emails (complaint copies, reminders, auto-replies)
+    if not msg["ticket_id"] or msg.get("message_id", "").strip().endswith("@ecosort.app>"):
         return "ignored"
     issue = find_by_ticket(store, msg["ticket_id"])
     if not issue:
