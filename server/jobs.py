@@ -29,4 +29,4 @@ def start(store, cfg):
                 print("[jobs] error:", e)
             time.sleep(cfg.poll_seconds)
 
-    threading.Thread(target=loop, daemon=True, name="civicfix-monitor").start()
+    threading.Thread(target=loop, daemon=True, name="ecosort-monitor").start()

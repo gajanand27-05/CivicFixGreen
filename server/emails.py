@@ -36,7 +36,7 @@ HOW TO CLOSE THIS COMPLAINT: reply to this email (keep "{ticket}" in the subject
 If no response is received within 5 days, an automatic reminder will be sent.
 
 Thank you,
-A concerned citizen (via CivicFix Green)
+A concerned citizen (via EcoSort)
 Track status: {cfg.public_base_url}/#/issue/{issue.get('id', '')}
 """
 
@@ -48,7 +48,7 @@ def ask_for_photo(ticket, reason):
 
 To close this complaint, please reply to this email with a clear photo of the SAME spot after cleaning.
 
-- CivicFix Green (automated)"""
+- EcoSort (automated)"""
 
 
 def reminder_officer(ticket, issue, n, days):
@@ -59,7 +59,7 @@ Map: {_maps(issue)}
 
 The original photo is attached. Please arrange cleaning and reply to this email with a photo of the cleaned area to close the complaint.
 
-- CivicFix Green (automated)"""
+- EcoSort (automated)"""
 
 
 def reminder_citizen(ticket, issue, office, n, days):
@@ -67,7 +67,7 @@ def reminder_citizen(ticket, issue, office, n, days):
 
 We have sent reminder {n} to the office. You'll be notified as soon as they respond.
 
-- CivicFix Green"""
+- EcoSort"""
 
 
 def status_update(ticket, issue, status_label, note):
@@ -76,7 +76,7 @@ def status_update(ticket, issue, status_label, note):
 Status: {status_label}
 {note}
 
-- CivicFix Green"""
+- EcoSort"""
 
 
 def resolved_citizen(ticket, issue, office, reason):
@@ -85,4 +85,4 @@ def resolved_citizen(ticket, issue, office, reason):
 {office} sent a photo of the cleaned area (attached). Verification: {reason}
 
 Thank you for helping keep Bengaluru clean.
-- CivicFix Green"""
+- EcoSort"""

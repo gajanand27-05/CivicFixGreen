@@ -1,8 +1,8 @@
-# 🌱 CivicFix Green: Snap a Garbage Dump, We Chase BBMP Until It's Clean
+# 🌱 EcoSort: Snap a Garbage Dump, We Chase BBMP Until It's Clean
 
 **AI PROMPTVERSE: AI for Sustainability**
 
-See garbage dumped on a street corner? Take a photo. CivicFix Green:
+See garbage dumped on a street corner? Take a photo. EcoSort:
 
 1. **Traces the location**: device GPS, or the GPS stored in an uploaded photo; you can drag the pin.
 2. **Checks the photo with Gemini**: confirms it is waste dumped in a public place (rejects selfies/spam), rates severity 1–5, estimates the pile weight and writes the complaint description.

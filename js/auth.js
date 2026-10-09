@@ -1,7 +1,7 @@
 // js/auth.js
 // Authentication & Role Management
 
-const SESSION_KEY = 'civicfix_user_session';
+const SESSION_KEY = 'ecosort_user_session';
 
 const Auth = {
   currentUser: null,

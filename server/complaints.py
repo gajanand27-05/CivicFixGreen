@@ -39,7 +39,7 @@ def _next_ticket(store):
     meta = store.get("meta", "ticket_seq") or {"id": "ticket_seq", "value": 0}
     meta["value"] += 1
     store.put("meta", meta)
-    return f"CFG-{meta['value']:04d}"
+    return f"ECO-{meta['value']:04d}"
 
 
 def _photo(issue, ticket, key="before_photo_url"):
@@ -62,8 +62,8 @@ def preview(cfg, issue):
     office = offices.nearest(issue["lat"], issue["lng"])
     to = offices.recipient(office, cfg)
     return {"to": to, "office": office, "email_enabled": cfg.email_enabled and bool(to),
-            "subject": emails.complaint_subject("CFG-XXXX", issue),
-            "body": emails.complaint_body("CFG-XXXX", {**issue, "id": issue.get("id", "new")}, office, cfg)}
+            "subject": emails.complaint_subject("ECO-XXXX", issue),
+            "body": emails.complaint_body("ECO-XXXX", {**issue, "id": issue.get("id", "new")}, office, cfg)}
 
 
 def send_complaint(store, cfg, issue_id, complainer_email):
@@ -157,16 +157,16 @@ def handle_reply(store, cfg, msg):
     mime, data = msg["images"][0]
     after_url = f"data:{mime};base64,{base64.b64encode(data).decode()}"
     v = ai.verify_cleanup(cfg, issue["before_photo_url"], after_url)
-    add_event(store, issue["id"], "ai_validated",
-              f"AI cleanup check: {v['reason']} (confidence {round(v['confidence'] * 100)}%)", "system_ai")
+    add_event(store, issue["id"], "cleanup_checked",
+              f"Cleanup photo check: {v['reason']} (confidence {round(v['confidence'] * 100)}%)", "system")
 
     if v["is_resolved"] and v["confidence"] >= 0.7:
         t = now_iso()
         issue.update(status="resolved", resolved_at=t, updated_at=t, after_photo_url=after_url,
                      ai_resolution_validated=True, ai_resolution_confidence=v["confidence"])
         store.put("issues", issue)
-        add_event(store, issue["id"], "resolved", "Closed via BBMP email reply with an AI-verified cleanup photo.", "authority")
-        notify(store, issue["reporter_id"], f"{ticket} closed", "BBMP cleaned the spot. AI verified the photo.", "success", issue["id"])
+        add_event(store, issue["id"], "resolved", "Closed via BBMP email reply with a verified cleanup photo.", "authority")
+        notify(store, issue["reporter_id"], f"{ticket} closed", "BBMP cleaned the spot and the photo was verified.", "success", issue["id"])
         if c.get("complainer_email"):
             _try_mail(store, cfg, issue["id"], c["complainer_email"], f"[{ticket}] Complaint closed",
                       emails.resolved_citizen(ticket, issue, c["office_name"], v["reason"]),
@@ -174,7 +174,7 @@ def handle_reply(store, cfg, msg):
         return "resolved"
 
     store.put("issues", issue)
-    add_event(store, issue["id"], "photo_rejected", f"Cleanup photo not accepted: {v['reason']}", "system_ai")
+    add_event(store, issue["id"], "photo_rejected", f"Cleanup photo not accepted: {v['reason']}", "system")
     _try_mail(store, cfg, issue["id"], c["office_email"], f"Re: {msg['subject']}",
               emails.ask_for_photo(ticket, f"Our automated check could not confirm the cleanup: {v['reason']}"),
               in_reply_to=msg["message_id"])

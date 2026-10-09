@@ -9,15 +9,9 @@ const SignupPage = {
       <div class="auth-wrapper">
         <div class="auth-card">
           <div class="auth-header">
-            <div class="auth-logo">
-              <svg viewBox="0 0 512 512" width="48" height="48">
-                <path d="M256,64 C160,64 80,144 80,240 C80,360 224,448 256,448 C288,448 432,360 432,240 C432,144 352,64 256,64 Z" fill="#1A56DB" />
-                <circle cx="256" cy="240" r="100" fill="#FFFFFF" />
-                <path d="M208,248 L238,278 L304,200" fill="none" stroke="#1A56DB" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </div>
-            <h1>Create Account</h1>
-            <p>Join CivicFix to improve your city</p>
+            <img src="assets/ecosort-logo.png" alt="EcoSort" class="auth-logo-img">
+            <h1>Create your account</h1>
+            <p>Join your neighbours in keeping Bengaluru clean.</p>
           </div>
 
           <div id="signup-error" class="auth-error-banner" style="display: none;"></div>
@@ -27,7 +21,7 @@ const SignupPage = {
               <label for="signup-name">Full Name</label>
               <div class="input-with-icon">
                 <i data-lucide="user"></i>
-                <input type="text" id="signup-name" placeholder="John Doe" autocomplete="name">
+                <input type="text" id="signup-name" placeholder="Your name" autocomplete="name">
               </div>
             </div>
 
@@ -56,7 +50,7 @@ const SignupPage = {
               </div>
 
               <div class="form-group half-width">
-                <label for="signup-ward">Ward / Sector</label>
+                <label for="signup-ward">Ward</label>
                 <select id="signup-ward">
                   <option value="Ward 4">Ward 4 (Indiranagar)</option>
                   <option value="Ward 5">Ward 5 (HAL Stage 2)</option>
@@ -65,7 +59,7 @@ const SignupPage = {
               </div>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-block">Register</button>
+            <button type="submit" class="btn btn-primary btn-block">Create account</button>
           </form>
 
           <div class="auth-footer">
@@ -164,7 +158,7 @@ const SignupPage = {
 
       try {
         const user = await Auth.register(name, email, password, city, ward);
-        App.addNotification('Welcome to CivicFix!', `Account created successfully, welcome ${user.name}!`, 'success');
+        App.addNotification('Welcome to EcoSort!', `Glad to have you, ${user.name}.`, 'success');
         Router.navigate('#/home');
       } catch (err) {
         errBanner.innerText = err.message || 'Failed to register account.';

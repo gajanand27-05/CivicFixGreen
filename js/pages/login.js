@@ -9,15 +9,9 @@ const LoginPage = {
       <div class="auth-wrapper">
         <div class="auth-card">
           <div class="auth-header">
-            <div class="auth-logo">
-              <svg viewBox="0 0 512 512" width="48" height="48">
-                <path d="M256,64 C160,64 80,144 80,240 C80,360 224,448 256,448 C288,448 432,360 432,240 C432,144 352,64 256,64 Z" fill="#1A56DB" />
-                <circle cx="256" cy="240" r="100" fill="#FFFFFF" />
-                <path d="M208,248 L238,278 L304,200" fill="none" stroke="#1A56DB" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </div>
-            <h1>Welcome to CivicFix Green</h1>
-            <p>Report garbage dumps. We follow up with BBMP until they are cleared.</p>
+            <img src="assets/ecosort-logo.png" alt="EcoSort" class="auth-logo-img">
+            <h1>Welcome back</h1>
+            <p>Sign in to report and track garbage dumps.</p>
           </div>
           
           <div id="auth-error" class="auth-error-banner" style="display: none;"></div>
@@ -51,7 +45,7 @@ const LoginPage = {
           </form>
 
           <div class="auth-divider">
-            <span>or continue with</span>
+            <span>or</span>
           </div>
 
           <button id="google-signin-btn" class="btn btn-outline btn-block btn-google">
@@ -64,24 +58,20 @@ const LoginPage = {
             Continue with Google
           </button>
 
-          <div class="demo-accounts-box mt-3 mb-3">
-            <span class="demo-title">⚡ 1-Click Role Logins (Judge & Demo Testing)</span>
+          <div class="demo-accounts-box">
+            <span class="demo-title">Quick demo login</span>
             <div class="demo-btn-group">
-              <button type="button" class="btn btn-xs btn-outline demo-login-btn" data-email="citizen@civicfix.gov" data-pass="citizen123">
+              <button type="button" class="btn btn-xs btn-outline demo-login-btn" data-email="citizen@ecosort.gov" data-pass="citizen123">
                 <i data-lucide="user"></i> Citizen
               </button>
-              <button type="button" class="btn btn-xs btn-outline demo-login-btn" data-email="officer@civicfix.gov" data-pass="officer123">
-                <i data-lucide="shield"></i> Officer
+              <button type="button" class="btn btn-xs btn-outline demo-login-btn" data-email="officer@ecosort.gov" data-pass="officer123">
+                <i data-lucide="shield"></i> BBMP Officer
               </button>
-              <button type="button" class="btn btn-xs btn-outline demo-login-btn" data-email="admin@civicfix.gov" data-pass="admin123">
+              <button type="button" class="btn btn-xs btn-outline demo-login-btn" data-email="admin@ecosort.gov" data-pass="admin123">
                 <i data-lucide="settings"></i> Admin
               </button>
             </div>
-            <div style="margin-top: 10px; text-align: center;">
-              <button type="button" id="reset-demo-db-btn" class="btn btn-xs" style="background: transparent; color: var(--text-muted); font-size: 11px; text-decoration: underline; border: none; cursor: pointer;">
-                🔄 Reset Demo Data to Clean State
-              </button>
-            </div>
+            <button type="button" id="reset-demo-db-btn" class="demo-reset-btn">Reset demo data</button>
           </div>
 
           <!-- Interactive Google Account Selector Modal Container -->
@@ -95,7 +85,7 @@ const LoginPage = {
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
                 </svg>
                 <h3>Sign in with Google</h3>
-                <p>Choose an account to continue to CivicFix Green</p>
+                <p>Choose an account to continue to EcoSort</p>
               </div>
 
               <div class="google-accounts-list">
@@ -126,14 +116,14 @@ const LoginPage = {
 
               <div class="google-modal-footer">
                 <button type="button" id="close-google-modal-btn" class="btn btn-outline btn-xs">Cancel</button>
-                <span style="font-size: 11px; color: var(--text-muted);">Secure Google Identity Demo</span>
+                <span style="font-size: 11px; color: var(--text-muted);">Demo accounts</span>
               </div>
             </div>
           </div>
 
           <div class="auth-footer">
-            <p>New to CivicFix Green? <a href="#/signup">Create an account</a></p>
-            <p class="mt-2"><a href="#/public" class="transparency-link"><i data-lucide="eye" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>View Bengaluru Clean City Board</a></p>
+            <p>New to EcoSort? <a href="#/signup">Create an account</a></p>
+            <p class="mt-2"><a href="#/public">View the City Board</a></p>
           </div>
         </div>
       </div>
@@ -204,7 +194,7 @@ const LoginPage = {
 
       try {
         const user = await Auth.login(email, password, rememberMe);
-        App.addNotification(`Welcome back, ${user.name}!`, 'Logged in successfully.', 'success');
+        App.addNotification(`Welcome back, ${user.name}!`, '', 'success');
         Router.redirectToRoleDashboard(user);
       } catch (err) {
         errBanner.innerText = err.message || 'An error occurred.';
@@ -240,7 +230,7 @@ const LoginPage = {
 
         try {
           const user = await Auth.googleSignIn(accountData);
-          App.addNotification(`Welcome, ${user.name}!`, 'Signed in with Google Account.', 'success');
+          App.addNotification(`Welcome, ${user.name}!`, '', 'success');
           Router.redirectToRoleDashboard(user);
         } catch (err) {
           errBanner.innerText = err.message || 'OAuth failure.';
@@ -260,7 +250,7 @@ const LoginPage = {
         if (passField) passField.value = pass;
         try {
           const user = await Auth.login(email, pass, true);
-          App.addNotification(`Welcome, ${user.name}!`, `Logged in as demo ${user.role}.`, 'success');
+          App.addNotification(`Welcome, ${user.name}!`, '', 'success');
           Router.redirectToRoleDashboard(user);
         } catch (err) {
           errBanner.innerText = err.message || 'Login failed.';
@@ -272,10 +262,10 @@ const LoginPage = {
     // Reset Demo DB Handler
     if (resetDbBtn) {
       resetDbBtn.addEventListener('click', async () => {
-        if (confirm('Reset demo database to fresh waste complaints and users?')) {
+        if (confirm('Reset demo data to the original sample complaints and users?')) {
           if (DB && typeof DB.resetDemoData === 'function') {
             await DB.resetDemoData();
-            App.showToast('Database Reset', 'Demo data refreshed with Bengaluru waste complaints.', 'success');
+            App.showToast('Demo data reset', 'Fresh sample complaints loaded.', 'success');
           }
         }
       });

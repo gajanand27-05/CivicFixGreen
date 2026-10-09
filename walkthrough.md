@@ -1,6 +1,6 @@
-# CivicFix PWA Walkthrough & Verification Report
+# EcoSort PWA Walkthrough & Verification Report
 
-CivicFix is a Progressive Web App (PWA) built to enable community-driven civic issue reporting and transparent municipal resolution. The application leverages Google AI Studio (Gemma models) for image classification, voice transcription, and fix validation, alongside the Google Maps JavaScript SDK (with dynamic Leaflet Map fallback) for real-time geographic insights.
+EcoSort is a Progressive Web App (PWA) built to enable community-driven civic issue reporting and transparent municipal resolution. The application leverages Google AI Studio (Gemma models) for image classification, voice transcription, and fix validation, alongside the Google Maps JavaScript SDK (with dynamic Leaflet Map fallback) for real-time geographic insights.
 
 ---
 
@@ -9,7 +9,7 @@ CivicFix is a Progressive Web App (PWA) built to enable community-driven civic i
 - **Frontend & Routing:** Native single-page application (SPA) with a custom hash-based router (`#/home`, `#/report`, `#/map`, `#/leaderboard`, `#/profile`, `#/dashboard`, `#/admin`, `#/public`, `#/issue/ID`).
 - **Styling:** Premium Vanilla CSS design system with custom HSL properties, fluid grids, typography (`Plus Jakarta Sans`), glassmorphism cards, and transitions. Supporting full **Dark Mode** matching system/user preferences.
 - **Storage Layer:** Robust IndexedDB wrapper (`js/db.js`) maintaining relational tables for `users`, `issues`, `verifications`, `timeline`, `badges`, `predictions`, and `reports`. Pre-seeded with 15+ rich records (upvotes, timeline histories, comments).
-- **Service Worker & PWA:** Service Worker (`sw.js`) handles asset caching, offline fallback to `offline.html`, and background notification events. Incremented to `civicfix-cache-v2` to force update client caches.
+- **Service Worker & PWA:** Service Worker (`sw.js`) handles asset caching, offline fallback to `offline.html`, and background notification events. Incremented to `ecosort-cache-v2` to force update client caches.
 - **Visual WOW Factor:** Dynamic inline SVG illustrations generated programmatically for issue categories (potholes, streetlights, garbage, water leaks) so data displays immediately without external URL dependencies.
 
 ---
@@ -57,8 +57,8 @@ During our E2E review and validation phase, we added key robustness updates acro
 ### 2. Role-Based Authentication
 - Gated role transitions with secure session caching ("Remember me" cookies mock via `localStorage`).
 - **CITIZEN:** User registration and Google OAuth sign-in. Profile tracking for points, badges grid, submitted reports, and resolved issues.
-- **AUTHORITY (Officer Rajesh Kumar - `officer@civicfix.gov` / `officer123`):** Pre-created dashboard focusing on dispatch management, SVG-based operational charts, and validation.
-- **ADMIN (`admin@civicfix.gov` / `admin123`):** Special panel to register new authority officer staff accounts, audit lists, and toggle categories.
+- **AUTHORITY (Officer Rajesh Kumar - `officer@ecosort.gov` / `officer123`):** Pre-created dashboard focusing on dispatch management, SVG-based operational charts, and validation.
+- **ADMIN (`admin@ecosort.gov` / `admin123`):** Special panel to register new authority officer staff accounts, audit lists, and toggle categories.
 
 ### 3. Issue Reporting Flow
 - **Media Capture:** Camera webcam interface snaps photos directly, or allows uploading up to 5 gallery images with thumbnail lists.
@@ -143,9 +143,9 @@ The application will launch on:
 [http://localhost:8080](http://localhost:8080)
 
 ### Pre-seeded Login Credentials
-- **Admin Portal:** `admin@civicfix.gov` / `admin123`
-- **Authority Portal:** `officer@civicfix.gov` / `officer123`
-- **Citizen Account:** `citizen@civicfix.gov` / `citizen123`
+- **Admin Portal:** `admin@ecosort.gov` / `admin123`
+- **Authority Portal:** `officer@ecosort.gov` / `officer123`
+- **Citizen Account:** `citizen@ecosort.gov` / `citizen123`
 
 ---
 
@@ -164,7 +164,7 @@ We have successfully addressed the three UI issues:
 - **Problem:** The API configuration section was showing up on the client even after removal due to aggressive Service Worker cache persistence.
 - **Fix:**
   - Removed all settings panels, navigation tabs, inputs, and listeners related to Google AI Studio API key configurations from [profile.js](file:///c:/vibecode_project_blockesblock/js/pages/profile.js) on disk.
-  - Upgraded the Service Worker cache name to `civicfix-cache-v3` in [sw.js](file:///c:/vibecode_project_blockesblock/sw.js).
+  - Upgraded the Service Worker cache name to `ecosort-cache-v3` in [sw.js](file:///c:/vibecode_project_blockesblock/sw.js).
   - Added programmatical cache invalidation in [app.js](file:///c:/vibecode_project_blockesblock/js/app.js) on initialization to delete all cache storage keys that do not match the current version, alongside calling `reg.update()` to instantly update the client assets.
 
 ### 3. Circular Profile Picture in Top-Right Corner & Header Spacing

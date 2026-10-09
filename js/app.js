@@ -7,7 +7,7 @@ const App = {
   syncInterval: null,
 
   async init() {
-    console.log('Bootstrapping CivicFix Green...');
+    console.log('Bootstrapping EcoSort...');
 
     // 1. Initialize DB and Seeding
     try {
@@ -24,7 +24,7 @@ const App = {
       try {
         caches.keys().then(keys => {
           keys.forEach(key => {
-            if (key !== 'civicfix-cache-v6') {
+            if (key !== 'ecosort-cache-v7') {
               console.log('Clearing old cache to force update:', key);
               caches.delete(key);
             }
@@ -85,7 +85,7 @@ const App = {
 
   initNotifications() {
     // Retrieve unread notifications from local storage if any
-    const savedNotifs = localStorage.getItem('civicfix_notifications');
+    const savedNotifs = localStorage.getItem('ecosort_notifications');
     if (savedNotifs) {
       try {
         this.notifications = JSON.parse(savedNotifs);
@@ -96,7 +96,7 @@ const App = {
       }
     } else {
       // Default welcome notification
-      this.addNotification('Welcome to CivicFix Green!', 'Snap a garbage dump and we will chase BBMP until it is cleaned.', 'info');
+      this.addNotification('Welcome to EcoSort!', 'Snap a photo of a garbage dump, we handle the rest with BBMP.', 'info');
     }
   },
 
@@ -112,7 +112,7 @@ const App = {
     };
     this.notifications.unshift(notif);
     this.unreadCount = this.notifications.filter(n => !n.read).length;
-    localStorage.setItem('civicfix_notifications', JSON.stringify(this.notifications));
+    localStorage.setItem('ecosort_notifications', JSON.stringify(this.notifications));
     this.updateNotificationBadge();
     this.showToast(title, message, type);
     
@@ -143,13 +143,14 @@ const App = {
     }
   },
 
-  showToast(title, message, type) {
+  showToast(title, message, type = 'info') {
     const toastContainer = document.getElementById('toast-container');
     if (!toastContainer) return;
 
     const toast = document.createElement('div');
-    toast.className = `toast toast-${type} slide-in`;
-    
+    toast.className = `toast toast-${type}`;
+    toast.setAttribute('role', 'status');
+
     let icon = 'info';
     if (type === 'success') icon = 'check-circle';
     if (type === 'warning') icon = 'alert-triangle';
@@ -160,27 +161,30 @@ const App = {
         <i data-lucide="${icon}"></i>
         <div class="toast-text">
           <div class="toast-title">${title}</div>
-          <div class="toast-message">${message}</div>
+          ${message ? `<div class="toast-message">${message}</div>` : ''}
         </div>
       </div>
-      <button class="toast-close">&times;</button>
+      <button class="toast-close" aria-label="Dismiss">&times;</button>
     `;
 
     toastContainer.appendChild(toast);
-    
+    // Keep at most 4 toasts on screen
+    while (toastContainer.children.length > 4) toastContainer.firstElementChild.remove();
+
     if (window.lucide) window.lucide.createIcons();
 
-    // Remove after 5 seconds
-    const timer = setTimeout(() => {
-      toast.classList.remove('slide-in');
-      toast.classList.add('fade-out');
-      toast.addEventListener('animationend', () => toast.remove());
-    }, 5000);
+    let dismissed = false;
+    const dismiss = () => {
+      if (dismissed) return;
+      dismissed = true;
+      clearTimeout(showTimer);
+      toast.classList.add('toast-leaving');
+      // Remove after the 300ms exit transition; guaranteed even if no event fires
+      setTimeout(() => toast.remove(), 350);
+    };
 
-    toast.querySelector('.toast-close').addEventListener('click', () => {
-      clearTimeout(timer);
-      toast.remove();
-    });
+    const showTimer = setTimeout(dismiss, 2500);
+    toast.querySelector('.toast-close').addEventListener('click', dismiss);
   },
 
   // Pull real notifications written by the server (complaint raised, reminders, BBMP replies, status changes)
@@ -216,51 +220,23 @@ const App = {
       }
     });
 
+    // Click anywhere outside the overlay (or on an item) closes it
     document.addEventListener('click', (e) => {
       if (overlay && overlay.classList.contains('active') && !overlay.contains(e.target)) {
         overlay.classList.remove('active');
       }
     });
 
-    // Dark Mode Toggle Listener
-    const updateThemeIcons = (isDark) => {
-      document.querySelectorAll('#theme-toggle-header i, #theme-toggle-mobile i').forEach(icon => {
-        icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
-      });
-      if (window.lucide) window.lucide.createIcons();
-    };
-
-    window.addEventListener('theme-changed', (e) => {
-      const isDark = e.detail.theme === 'dark';
-      if (isDark) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-      updateThemeIcons(isDark);
+    // Close the notification overlay on Escape and on every route change
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && overlay) overlay.classList.remove('active');
+    });
+    window.addEventListener('hashchange', () => {
+      if (overlay) overlay.classList.remove('active');
     });
 
-    // Check saved or system preference
-    const isSavedDark = localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    if (isSavedDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    updateThemeIcons(isSavedDark);
-
-    // Theme toggle buttons click
-    const toggleTheme = () => {
-      const willBeDark = !document.documentElement.classList.contains('dark');
-      const newTheme = willBeDark ? 'dark' : 'light';
-      localStorage.setItem('theme', newTheme);
-      window.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme: newTheme } }));
-    };
-
-    const themeHeaderBtn = document.getElementById('theme-toggle-header');
-    const themeMobileBtn = document.getElementById('theme-toggle-mobile');
-    if (themeHeaderBtn) themeHeaderBtn.addEventListener('click', toggleTheme);
-    if (themeMobileBtn) themeMobileBtn.addEventListener('click', toggleTheme);
+    // Light theme only
+    document.documentElement.classList.remove('dark');
   },
 
   toggleNotificationsOverlay() {
@@ -273,7 +249,7 @@ const App = {
       // Mark all as read
       this.notifications.forEach(n => n.read = true);
       this.unreadCount = 0;
-      localStorage.setItem('civicfix_notifications', JSON.stringify(this.notifications));
+      localStorage.setItem('ecosort_notifications', JSON.stringify(this.notifications));
       this.updateNotificationBadge();
       this.renderNotificationsList();
     }

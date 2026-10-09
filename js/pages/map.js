@@ -29,42 +29,47 @@ const MapPage = {
 
         <!-- Layer Toggle Panel (Top Right) -->
         <div class="map-layer-toggle card">
-          <h4>Map Layers</h4>
+          <h4>Show on map</h4>
           <label class="checkbox-container">
             <input type="checkbox" id="layer-issues" checked>
             <span class="checkmark"></span>
-            Issues Layer
+            Complaint pins
           </label>
           <label class="checkbox-container">
             <input type="checkbox" id="layer-heatmap">
             <span class="checkmark"></span>
-            Heatmap Layer
+            Heatmap
           </label>
           <label class="checkbox-container">
             <input type="checkbox" id="layer-hotspots">
             <span class="checkmark"></span>
-            AI Hotspots
+            Predicted hotspots
           </label>
+          <div class="map-legend">
+            <span><i class="map-legend-dot is-open"></i>Open</span>
+            <span><i class="map-legend-dot is-progress"></i>In progress</span>
+            <span><i class="map-legend-dot is-closed"></i>Closed</span>
+          </div>
         </div>
 
         <!-- Floating Action Button -->
-        <button class="fab-report" id="map-fab-report" title="Report Issue Here">
+        <button class="fab-report" id="map-fab-report" title="Report a dump at the map centre">
           <i data-lucide="plus"></i>
-          <span>Report Here</span>
+          <span>Report here</span>
         </button>
 
         <!-- Slide Up Filter Panel -->
         <div class="map-filter-panel" id="map-filter-sheet">
           <div class="filter-panel-header" id="filter-sheet-drag">
             <div class="drag-handle"></div>
-            <h3>Filter Map Pins</h3>
+            <h3>Filters</h3>
           </div>
           <div class="filter-panel-body">
             <div class="form-row">
               <div class="form-group half-width">
-                <label for="map-filter-category">Category</label>
+                <label for="map-filter-category">Type</label>
                 <select id="map-filter-category" class="form-control">
-                  <option value="all">All Categories</option>
+                  <option value="all">All types</option>
                   ${Green.categoryOptionsHtml()}
                 </select>
               </div>
@@ -72,7 +77,7 @@ const MapPage = {
               <div class="form-group half-width">
                 <label for="map-filter-status">Status</label>
                 <select id="map-filter-status" class="form-control">
-                  <option value="all">All Statuses</option>
+                  <option value="all">All</option>
                   <option value="open">Open</option>
                   <option value="in_progress">In Progress</option>
                   <option value="resolved">Closed</option>
@@ -81,12 +86,12 @@ const MapPage = {
             </div>
 
             <div class="form-group">
-              <label for="map-filter-date">Date Range</label>
+              <label for="map-filter-date">Reported</label>
               <select id="map-filter-date" class="form-control">
-                <option value="all">All Time</option>
-                <option value="3days">Last 3 Days</option>
-                <option value="week">Last Week</option>
-                <option value="month">Last Month</option>
+                <option value="all">Any time</option>
+                <option value="3days">Last 3 days</option>
+                <option value="week">Last 7 days</option>
+                <option value="month">Last 30 days</option>
               </select>
             </div>
           </div>
@@ -131,6 +136,14 @@ const MapPage = {
     await this.loadMapData();
     this.initMap();
     this.setupListeners();
+
+    // Leaflet.heat throws if it redraws after the page is gone, so drop it on navigation
+    window.addEventListener('hashchange', () => {
+      if (this.heatmap && this.map && typeof this.map.hasLayer === 'function' && this.map.hasLayer(this.heatmap)) {
+        this.map.removeLayer(this.heatmap);
+      }
+      this.heatmap = null;
+    }, { once: true });
   },
 
   async loadMapData() {
@@ -142,14 +155,15 @@ const MapPage = {
     const container = document.getElementById('main-google-map');
     if (!container) return;
 
-    const lat = 12.9740;
-    const lng = 77.6415;
+    // City-wide default view (complaints span all of Bengaluru)
+    const lat = 12.97;
+    const lng = 77.62;
 
     if (MapHelper.isGoogleMapsAvailable()) {
       container.innerHTML = '';
       const mapOptions = {
         center: { lat, lng },
-        zoom: 14,
+        zoom: 11,
         disableDefaultUI: true,
         zoomControl: true,
         styles: [
@@ -181,16 +195,6 @@ const MapPage = {
         ]
       };
 
-      if (document.documentElement.classList.contains('dark')) {
-        mapOptions.styles = [
-          { "elementType": "geometry", "stylers": [{ "color": "#1e293b" }] },
-          { "elementType": "labels.text.stroke", "stylers": [{ "color": "#0f172a" }] },
-          { "elementType": "labels.text.fill", "stylers": [{ "color": "#94a3b8" }] },
-          { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#334155" }] },
-          { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#0f172a" }] }
-        ];
-      }
-
       this.map = new google.maps.Map(container, mapOptions);
     } else {
       if (this.map && typeof this.map.remove === 'function') {
@@ -201,9 +205,8 @@ const MapPage = {
       this.map = L.map(container, {
         zoomControl: true,
         attributionControl: false
-      }).setView([lat, lng], 14);
+      }).setView([lat, lng], 11);
 
-      const isDark = document.documentElement.classList.contains('dark');
       const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
       L.tileLayer(tileUrl, {
@@ -213,11 +216,13 @@ const MapPage = {
       setTimeout(() => {
         if (this.map && typeof this.map.invalidateSize === 'function') {
           this.map.invalidateSize();
+          window.fitMapToIssues(this.map, this.issues);
         }
       }, 150);
     }
 
     this.renderLayers();
+    if (MapHelper.isGoogleMapsAvailable()) window.fitMapToIssues(this.map, this.issues);
   },
 
   renderLayers() {
@@ -293,16 +298,16 @@ const MapPage = {
 
         const photoUrl = (issue.media_urls && issue.media_urls[0]) || issue.before_photo_url || '';
         const popupContent = `
-          <div class="map-popup-card" style="color:#0f172a; font-family:sans-serif; min-width:220px;">
+          <div class="map-popup-card" style="color:var(--text-color); font-family:sans-serif; min-width:220px;">
             ${photoUrl ? `<img src="${photoUrl}" style="width:100%; height:110px; object-fit:cover; border-radius:8px; margin-bottom:8px; display:block;" />` : ''}
             <div class="popup-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
               <span class="status-pill status-${issue.status}" style="font-size:10px; padding:2px 8px; font-weight:700;">${Green.statusLabel(issue.status).toUpperCase()}</span>
-              <span class="severity-badge severity-${issue.severity}" style="position:static; font-size:10px; padding:2px 6px;">Sev ${issue.severity}</span>
+              <span class="severity-badge severity-${issue.severity}" style="position:static; font-size:10px; padding:2px 6px;">Severity ${issue.severity}</span>
             </div>
-            <h4 class="popup-title" style="margin:4px 0; font-size:13px; font-weight:700; color:#0f172a; line-height:1.3;">${issue.title}</h4>
-            <p class="popup-address" style="margin:0 0 6px; font-size:11px; color:#64748b;">${issue.address}</p>
-            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#64748b; margin-bottom:8px;">
-              <span>👍 ${issue.upvote_count || 0} Upvotes</span>
+            <h4 class="popup-title" style="margin:4px 0; font-size:13px; font-weight:700; color:var(--text-color); line-height:1.3;">${issue.title}</h4>
+            <p class="popup-address" style="margin:0 0 6px; font-size:11px; color:var(--text-muted);">${issue.address}</p>
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--text-muted); margin-bottom:8px;">
+              <span>${issue.upvote_count || 0} upvotes</span>
               <span>Ward: ${issue.ward || 'Ward 4'}</span>
             </div>
             <button class="btn btn-primary btn-xs" style="width:100%; font-weight:700; padding:6px;" onclick="MapPage.viewIssueDetails('${issue.id}')">View Details</button>
@@ -410,21 +415,21 @@ const MapPage = {
         }
       } else {
         const points = this.issues.map(issue => [issue.lat, issue.lng, (issue.upvote_count || 1) * 0.1]);
-        if (points.length > 0 && typeof L.heatLayer !== 'undefined') {
+        if (points.length > 0 && typeof L.heatLayer !== 'undefined' && this.map.getSize().x > 0) {
           this.heatmap = L.heatLayer(points, { radius: 25, blur: 15 }).addTo(this.map);
         }
       }
     }
 
-    // 4. Render AI Hotspots Layer
+    // 4. Render predicted hotspots layer
     if (this.activeLayers.hotspots) {
       this.predictions.forEach(pred => {
         const hotspotContent = `
-          <div style="color:#0f172a; padding:6px; font-family:sans-serif;">
-            <strong style="color:#F97316;">AI predicted Hotspot Zone</strong>
-            <div>Category: ${Green.label(pred.predicted_category)}</div>
-            <div>Risk Score: ${pred.risk_score}%</div>
-            <div>Historical Recurrence: ${pred.historical_count}</div>
+          <div style="color:var(--text-color); padding:6px; font-family:sans-serif;">
+            <strong style="color:#C2410C;">Predicted hotspot</strong>
+            <div>${Green.label(pred.predicted_category)}</div>
+            <div>Risk: ${pred.risk_score}%</div>
+            <div>Past reports: ${pred.historical_count}</div>
           </div>
         `;
 
@@ -518,7 +523,7 @@ const MapPage = {
       const lng = typeof center.lng === 'function' ? center.lng() : center.lng;
       
       // Store coordinates to pre-fill report
-      sessionStorage.setItem('civicfix_report_prefill', JSON.stringify({ lat, lng }));
+      sessionStorage.setItem('ecosort_report_prefill', JSON.stringify({ lat, lng }));
 
       Router.navigate('#/report');
     });
@@ -553,6 +558,22 @@ const MapPage = {
 
   viewIssueDetails(issueId) {
     Router.navigate(`#/issue/${issueId}`);
+  }
+};
+
+
+// Shared helper: fit a Google/Leaflet map to a list of {lat,lng} points (city-wide default otherwise)
+window.fitMapToIssues = function (map, issues, maxZoom) {
+  const pts = (issues || []).filter(i => typeof i.lat === 'number' && typeof i.lng === 'number');
+  if (!map || pts.length === 0) return;
+  maxZoom = maxZoom || 15;
+  if (typeof google !== 'undefined' && google.maps && map instanceof google.maps.Map) {
+    const b = new google.maps.LatLngBounds();
+    pts.forEach(i => b.extend({ lat: i.lat, lng: i.lng }));
+    map.fitBounds(b, 40);
+    google.maps.event.addListenerOnce(map, 'idle', () => { if (map.getZoom() > maxZoom) map.setZoom(maxZoom); });
+  } else if (typeof L !== 'undefined' && map.fitBounds) {
+    map.fitBounds(L.latLngBounds(pts.map(i => [i.lat, i.lng])), { padding: [30, 30], maxZoom });
   }
 };
 

@@ -1,11 +1,16 @@
-const CACHE_NAME = 'civicfix-cache-v6';
+const CACHE_NAME = 'ecosort-cache-v7';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './style.css',
+  './css/citizen.css',
+  './css/officer.css',
   './manifest.json',
   './offline.html',
-  './assets/icon.svg',
+  './assets/ecosort-logo.png',
+  './assets/ecosort-icon-192.png',
+  './assets/ecosort-icon-512.png',
+  './assets/ecosort-favicon.png',
   './js/config.js',
   './js/categories.js',
   './js/app.js',
@@ -77,7 +82,7 @@ self.addEventListener('fetch', (e) => {
 
 // Listen to push events
 self.addEventListener('push', (e) => {
-  let data = { title: 'CivicFix', body: 'New civic update!' };
+  let data = { title: 'EcoSort', body: 'You have a new update.' };
   if (e.data) {
     try {
       data = e.data.json();
@@ -88,8 +93,8 @@ self.addEventListener('push', (e) => {
 
   const options = {
     body: data.body,
-    icon: 'assets/icon.svg',
-    badge: 'assets/icon.svg',
+    icon: 'assets/ecosort-icon-192.png',
+    badge: 'assets/ecosort-favicon.png',
     data: data.data || {}
   };
 

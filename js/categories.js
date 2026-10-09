@@ -1,5 +1,5 @@
 // js/categories.js
-// CivicFix Green: waste taxonomy and status helpers shared by all pages
+// EcoSort: waste taxonomy and status helpers shared by all pages
 
 const Green = {
   CATEGORIES: {

@@ -1,5 +1,5 @@
 // js/router.js
-// Client-side Hash Router for CivicFix
+// Client-side Hash Router for EcoSort
 
 const Router = {
   routes: {},
@@ -25,7 +25,7 @@ const Router = {
     let hash = window.location.hash || '#/home';
     
     // Check if onboarding completed for first-time splash redirect
-    const hasSeenSplash = localStorage.getItem('civicfix_seen_splash');
+    const hasSeenSplash = localStorage.getItem('ecosort_seen_splash');
     if (!hasSeenSplash && hash !== '#/splash') {
       this.navigate('#/splash');
       return;
@@ -123,7 +123,52 @@ const Router = {
     }
   },
 
+  // Round avatar for the top-right corner: photo if available, green initials circle otherwise
+  avatarHtml(user) {
+    const esc = (v) => String(v || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const name = (user && user.name) || 'User';
+    const initials = name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || 'U';
+    const url = user && user.avatar_url;
+    return `
+      <button type="button" class="header-avatar" onclick="Router.navigate('#/profile')" title="${esc(name)} - view profile" aria-label="View profile">
+        <span class="header-avatar-initials">${esc(initials)}</span>
+        ${url ? `<img src="${esc(url)}" alt="" onerror="this.remove()">` : ''}
+      </button>
+    `;
+  },
+
+  renderHeaderAuth(user) {
+    const loggedIn = Auth.isLoggedIn() && user;
+    const isStaff = loggedIn && (user.role === 'authority' || user.role === 'admin');
+
+    const authBtn = document.getElementById('desktop-auth-btn');
+    if (authBtn) {
+      authBtn.innerHTML = loggedIn ? `
+        <div class="header-auth-row">
+          ${isStaff ? `<button class="btn btn-sm btn-outline" onclick="Router.navigate('#/dashboard')"><i data-lucide="layout-dashboard"></i> Dashboard</button>` : ''}
+          ${this.avatarHtml(user)}
+        </div>
+      ` : `
+        <div class="header-auth-row">
+          <button class="btn btn-outline btn-sm" onclick="Router.navigate('#/login')">Sign In</button>
+          <button class="btn btn-primary btn-sm" onclick="Router.navigate('#/signup')">Sign Up</button>
+        </div>
+      `;
+    }
+
+    const mobileAuthBtn = document.getElementById('mobile-auth-btn');
+    if (mobileAuthBtn) {
+      mobileAuthBtn.innerHTML = loggedIn
+        ? this.avatarHtml(user)
+        : `<button class="btn btn-sm btn-outline" onclick="Router.navigate('#/login')">Sign In</button>`;
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  },
+
   updateNavigationLayout(hash, user) {
+    hash = hash || window.location.hash || '#/home';
+    if (user === undefined && typeof Auth !== 'undefined') user = Auth.getCurrentUser();
     const body = document.body;
     
     // Clear navigation classes
@@ -177,49 +222,8 @@ const Router = {
       });
     }
 
-    // Manage Auth buttons on desktop top bar
-    const authBtn = document.getElementById('desktop-auth-btn');
-    if (authBtn) {
-      if (Auth.isLoggedIn() && user) {
-        const isStaff = user.role === 'authority' || user.role === 'admin';
-        const userName = (user.name || 'User').split(' ')[0];
-        const avatarUrl = user.avatar_url || 'assets/icon.svg';
-        authBtn.innerHTML = `
-          <div style="display: flex; align-items: center; gap: 10px;">
-            ${isStaff ? `<button class="btn btn-xs btn-outline" onclick="Router.navigate('#/dashboard')"><i data-lucide="layout-dashboard"></i> GovPortal</button>` : ''}
-            <div class="user-pill-container" onclick="Router.navigate('#/profile')" title="View profile">
-              <img src="${avatarUrl}" class="user-avatar-sm" />
-              <span class="user-name-sm">${userName}</span>
-              <span class="points-badge">${user.points || 0} pts</span>
-            </div>
-            <button class="icon-btn btn-logout-quick" onclick="Auth.logout(); Router.navigate('#/home');" title="Sign out" style="width: 32px; height: 32px;">
-              <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
-            </button>
-          </div>
-        `;
-        if (window.lucide) window.lucide.createIcons();
-      } else {
-        authBtn.innerHTML = `
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <button class="btn btn-outline btn-sm" onclick="Router.navigate('#/login')">Sign In</button>
-            <button class="btn btn-primary btn-sm" onclick="Router.navigate('#/signup')">Sign Up</button>
-          </div>
-        `;
-      }
-    }
-
-    // Manage Auth buttons on mobile header
-    const mobileAuthBtn = document.getElementById('mobile-auth-btn');
-    if (mobileAuthBtn) {
-      if (Auth.isLoggedIn() && user) {
-        mobileAuthBtn.innerHTML = `
-          <img src="${user.avatar_url || 'assets/icon.svg'}" class="user-avatar-sm" onclick="Router.navigate('#/profile')" />
-        `;
-      } else {
-        mobileAuthBtn.innerHTML = `
-          <button class="btn btn-xs btn-outline" onclick="Router.navigate('#/login')">Sign In</button>
-        `;
-      }
-    }
+    this.renderHeaderAuth(user);
   }
 };
+
+window.Router = Router;

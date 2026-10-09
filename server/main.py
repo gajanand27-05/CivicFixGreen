@@ -1,5 +1,5 @@
 # server/main.py
-# CivicFix Green server: shared DB, AI, complaints (email optional), monitoring jobs, and the frontend.
+# EcoSort server: shared DB, AI, complaints (email optional), monitoring jobs, and the frontend.
 # Run from the repo root:  uvicorn server.main:app --port 8000   (no --reload: it would start the jobs twice)
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -13,7 +13,7 @@ from .store import Store
 
 cfg = config.load()
 ROOT = Path(__file__).resolve().parent.parent
-store = Store(ROOT / "server" / "civicfix.db")
+store = Store(ROOT / "server" / "ecosort.db")
 
 STORES = {"users", "issues", "verifications", "issue_timeline", "badges",
           "hotspot_predictions", "monthly_reports", "notifications", "meta"}
@@ -22,14 +22,14 @@ PUBLIC_FILES = {"index.html", "style.css", "manifest.json", "sw.js", "offline.ht
 
 @asynccontextmanager
 async def lifespan(app):
-    print(f"[civicfix] AI: {'Gemini ' + cfg.gemini_model if cfg.gemini_api_key else 'DEMO MODE (no GEMINI_API_KEY)'}")
-    print(f"[civicfix] Email: {'ON via ' + cfg.gmail_address if cfg.email_enabled else 'OFF (complaints tracked in-app only)'}")
-    print(f"[civicfix] Reminders after {cfg.reminder_after}, repeat every {cfg.reminder_repeat}, max {cfg.max_reminders}")
+    print(f"[ecosort] AI: {'Gemini ' + cfg.gemini_model if cfg.gemini_api_key else 'DEMO MODE (no GEMINI_API_KEY)'}")
+    print(f"[ecosort] Email: {'ON via ' + cfg.gmail_address if cfg.email_enabled else 'OFF (complaints tracked in-app only)'}")
+    print(f"[ecosort] Reminders after {cfg.reminder_after}, repeat every {cfg.reminder_repeat}, max {cfg.max_reminders}")
     jobs.start(store, cfg)
     yield
 
 
-app = FastAPI(title="CivicFix Green", lifespan=lifespan)
+app = FastAPI(title="EcoSort", lifespan=lifespan)
 
 
 def _check(name):
@@ -127,6 +127,8 @@ def api_send(issue_id: str, body: dict = Body(...)):
 # ---------- frontend (only whitelisted files; never serve server/) ----------
 app.mount("/js", StaticFiles(directory=ROOT / "js"), name="js")
 app.mount("/assets", StaticFiles(directory=ROOT / "assets"), name="assets")
+(ROOT / "css").mkdir(exist_ok=True)
+app.mount("/css", StaticFiles(directory=ROOT / "css"), name="css")
 
 
 @app.get("/")

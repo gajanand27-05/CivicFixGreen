@@ -1,10 +1,10 @@
 [
-  {"id": "east", "name": "BBMP East Zone Office", "zone": "East", "lat": 12.9850, "lng": 77.6050, "email_official": "", "officer_user_id": "officer_1"},
-  {"id": "west", "name": "BBMP West Zone Office", "zone": "West", "lat": 13.0030, "lng": 77.5700, "email_official": "", "officer_user_id": "officer_2"},
-  {"id": "south", "name": "BBMP South Zone Office", "zone": "South", "lat": 12.9250, "lng": 77.5830, "email_official": "", "officer_user_id": "officer_2"},
-  {"id": "mahadevapura", "name": "BBMP Mahadevapura Zone Office", "zone": "Mahadevapura", "lat": 12.9900, "lng": 77.6900, "email_official": "", "officer_user_id": "officer_1"},
-  {"id": "bommanahalli", "name": "BBMP Bommanahalli Zone Office", "zone": "Bommanahalli", "lat": 12.9000, "lng": 77.6200, "email_official": "", "officer_user_id": "officer_1"},
-  {"id": "yelahanka", "name": "BBMP Yelahanka Zone Office", "zone": "Yelahanka", "lat": 13.1000, "lng": 77.5960, "email_official": "", "officer_user_id": "officer_2"},
-  {"id": "rrnagar", "name": "BBMP RR Nagar Zone Office", "zone": "RR Nagar", "lat": 12.9270, "lng": 77.5190, "email_official": "", "officer_user_id": "officer_2"},
-  {"id": "dasarahalli", "name": "BBMP Dasarahalli Zone Office", "zone": "Dasarahalli", "lat": 13.0400, "lng": 77.5100, "email_official": "", "officer_user_id": "officer_2"}
+  {"id": "central_hq", "name": "Bengaluru Central City Corporation - Head Office Annex-3 (Hudson Circle)", "zone": "Central", "lat": 12.9677, "lng": 77.5874, "email_official": "", "officer_user_id": "officer_1"},
+  {"id": "east", "name": "Bengaluru Central City Corporation - East Zonal Office", "zone": "Central (East Zone)", "lat": 12.9855, "lng": 77.6054, "email_official": "", "officer_user_id": "officer_1"},
+  {"id": "east_mahadevapura", "name": "Bengaluru East City Corporation - Mahadevapura Zonal Office", "zone": "East", "lat": 12.9965, "lng": 77.6927, "email_official": "", "officer_user_id": "officer_1"},
+  {"id": "west_rrnagar", "name": "Bengaluru West City Corporation - R.R. Nagar Zonal Office", "zone": "West (R.R. Nagar Zone)", "lat": 12.9274, "lng": 77.5155, "email_official": "", "officer_user_id": "officer_2"},
+  {"id": "west_malleswaram", "name": "Bengaluru West City Corporation - IPP Malleswaram Office", "zone": "West (Malleswaram Zone)", "lat": 13.0027, "lng": 77.5703, "email_official": "", "officer_user_id": "officer_2"},
+  {"id": "north_yelahanka", "name": "Bengaluru North City Corporation - Yelahanka Zonal Office", "zone": "North", "lat": 13.1007, "lng": 77.5963, "email_official": "", "officer_user_id": "officer_2"},
+  {"id": "south_jayanagar", "name": "Bengaluru South City Corporation - South Zonal Office (Jayanagar)", "zone": "South (Jayanagar Zone)", "lat": 12.9293, "lng": 77.5824, "email_official": "", "officer_user_id": "officer_2"},
+  {"id": "south_bommanahalli", "name": "Bengaluru South City Corporation - Bommanahalli Zonal Office", "zone": "South (Bommanahalli Zone)", "lat": 12.9035, "lng": 77.6230, "email_official": "", "officer_user_id": "officer_2"}
 ]

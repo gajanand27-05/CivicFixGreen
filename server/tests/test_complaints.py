@@ -37,10 +37,10 @@ def test_send_without_email_registers_complaint_in_app(tmp_path):
     store = Store(tmp_path / "t.db")
     seed_issue(store)
     c = complaints.send_complaint(store, cfg(email=False), "i1", "")
-    assert c["ticket_id"] == "CFG-0001"
+    assert c["ticket_id"] == "ECO-0001"
     assert c["email_status"] == "not_sent"
     assert c["office_id"] == "east"
-    assert store.get("issues", "i1")["complaint"]["ticket_id"] == "CFG-0001"
+    assert store.get("issues", "i1")["complaint"]["ticket_id"] == "ECO-0001"
     assert notes(store, "citizen_1") and notes(store, "officer_1")
 
 
@@ -52,7 +52,7 @@ def test_send_with_email_records_message_id(tmp_path, monkeypatch):
     c = complaints.send_complaint(store, cfg(email=True), "i1", "citizen@example.com")
     assert c["email_status"] == "sent" and c["message_id"] == "<m1@x>"
     assert sent[0][0] == "team.officer+bbmp-east@gmail.com"
-    assert "CFG-0001" in sent[0][1]
+    assert "ECO-0001" in sent[0][1]
     assert sent[0][2]["cc"] == "citizen@example.com"
 
 
@@ -73,8 +73,8 @@ def test_tickets_increment(tmp_path):
     store = Store(tmp_path / "t.db")
     seed_issue(store)
     seed_issue(store, id="i2")
-    assert complaints.send_complaint(store, cfg(), "i1", "")["ticket_id"] == "CFG-0001"
-    assert complaints.send_complaint(store, cfg(), "i2", "")["ticket_id"] == "CFG-0002"
+    assert complaints.send_complaint(store, cfg(), "i1", "")["ticket_id"] == "ECO-0001"
+    assert complaints.send_complaint(store, cfg(), "i2", "")["ticket_id"] == "ECO-0002"
 
 
 def test_reminders_work_without_email(tmp_path):
@@ -119,14 +119,14 @@ def _email_issue(store, monkeypatch):
 def test_reply_from_stranger_is_ignored(tmp_path, monkeypatch):
     store = Store(tmp_path / "t.db")
     _email_issue(store, monkeypatch)
-    assert complaints.handle_reply(store, cfg(email=True), _reply("CFG-0001", sender="evil@x.com")) == "not_from_office"
+    assert complaints.handle_reply(store, cfg(email=True), _reply("ECO-0001", sender="evil@x.com")) == "not_from_office"
     assert store.get("issues", "i1")["status"] == "open"
 
 
 def test_reply_without_photo_sets_in_progress(tmp_path, monkeypatch):
     store = Store(tmp_path / "t.db")
     _email_issue(store, monkeypatch)
-    assert complaints.handle_reply(store, cfg(email=True), _reply("CFG-0001")) == "in_progress"
+    assert complaints.handle_reply(store, cfg(email=True), _reply("ECO-0001")) == "in_progress"
     assert store.get("issues", "i1")["status"] == "in_progress"
 
 
@@ -134,7 +134,7 @@ def test_reply_with_verified_photo_closes(tmp_path, monkeypatch):
     store = Store(tmp_path / "t.db")
     _email_issue(store, monkeypatch)
     monkeypatch.setattr(complaints.ai, "verify_cleanup", lambda *a: {"is_resolved": True, "confidence": 0.9, "reason": "clean", "is_mock": False})
-    assert complaints.handle_reply(store, cfg(email=True), _reply("CFG-0001", images=[("image/jpeg", b"x")])) == "resolved"
+    assert complaints.handle_reply(store, cfg(email=True), _reply("ECO-0001", images=[("image/jpeg", b"x")])) == "resolved"
     issue = store.get("issues", "i1")
     assert issue["status"] == "resolved" and issue["after_photo_url"].startswith("data:image/jpeg;base64,")
 
@@ -143,5 +143,5 @@ def test_reply_with_bad_photo_stays_open(tmp_path, monkeypatch):
     store = Store(tmp_path / "t.db")
     _email_issue(store, monkeypatch)
     monkeypatch.setattr(complaints.ai, "verify_cleanup", lambda *a: {"is_resolved": False, "confidence": 0.2, "reason": "selfie", "is_mock": False})
-    assert complaints.handle_reply(store, cfg(email=True), _reply("CFG-0001", images=[("image/jpeg", b"x")])) == "photo_rejected"
+    assert complaints.handle_reply(store, cfg(email=True), _reply("ECO-0001", images=[("image/jpeg", b"x")])) == "photo_rejected"
     assert store.get("issues", "i1")["status"] == "open"

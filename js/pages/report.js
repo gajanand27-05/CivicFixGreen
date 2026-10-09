@@ -1,5 +1,5 @@
 // js/pages/report.js
-// Garbage-dump complaint wizard: Photo -> AI check -> Location + nearest office -> Details -> Send
+// Garbage-dump complaint wizard: Photo -> Photo check -> Location + nearest office -> Details -> Send
 
 const ReportPage = {
   currentStep: 1,
@@ -16,202 +16,164 @@ const ReportPage = {
 
   async render() {
     return `
-      <div class="report-wizard">
-        <!-- Wizard Progress Bar -->
-        <div class="wizard-progress">
-          <div class="progress-line-bg">
-            <div class="progress-line-fill" id="wizard-progress-bar" style="width: 20%;"></div>
-          </div>
-          <div class="progress-steps-row">
-            <div class="step-dot active" data-step="1">1</div>
-            <div class="step-dot" data-step="2">2</div>
-            <div class="step-dot" data-step="3">3</div>
-            <div class="step-dot" data-step="4">4</div>
-            <div class="step-dot" data-step="5">5</div>
-          </div>
-          <div class="progress-labels-row">
-            <span>Photo</span>
-            <span>AI Check</span>
-            <span>Location</span>
-            <span>Complaint</span>
-            <span>Send</span>
-          </div>
+      <div class="es-report">
+        <div class="es-wizard-progress" aria-label="Progress">
+          <div class="es-progress-track"><div class="es-progress-fill" id="wizard-progress-bar" style="width: 0%;"></div></div>
+          <ol class="es-steps">
+            <li class="step-dot active" data-step="1"><span class="es-step-num">1</span><span class="es-step-label">Photo</span></li>
+            <li class="step-dot" data-step="2"><span class="es-step-num">2</span><span class="es-step-label">Photo Check</span></li>
+            <li class="step-dot" data-step="3"><span class="es-step-num">3</span><span class="es-step-label">Location</span></li>
+            <li class="step-dot" data-step="4"><span class="es-step-num">4</span><span class="es-step-label">Details</span></li>
+            <li class="step-dot" data-step="5"><span class="es-step-num">5</span><span class="es-step-label">Send</span></li>
+          </ol>
         </div>
 
-        <div class="wizard-card">
-          <!-- STEP 1: MEDIA CAPTURE -->
-          <div class="wizard-step-panel" id="step-1-panel">
-            <h2>Step 1: Photo of the Garbage Dump</h2>
-            <p class="text-muted">Take a live photo or upload one. We trace the location automatically.</p>
-            
-            <div class="camera-capture-box" id="camera-click-box">
+        <div class="es-wizard-card">
+          <!-- STEP 1: PHOTO -->
+          <div class="wizard-step-panel es-panel" id="step-1-panel">
+            <h2 class="es-panel-title">Add a photo of the dump</h2>
+            <p class="es-panel-sub">Take a photo or pick one from your gallery. We'll find the location for you.</p>
+
+            <div class="es-capture" id="camera-click-box" role="button" tabindex="0">
               <i data-lucide="camera" class="camera-icon"></i>
-              <span>Tap to Capture Photo</span>
+              <span>Tap to take a photo</span>
               <video id="webcam-preview" autoplay playsinline style="display: none;"></video>
             </div>
-            
-            <div class="upload-options">
-              <label class="btn btn-outline file-upload-label">
-                <i data-lucide="image"></i> Upload from Gallery
-                <input type="file" id="gallery-file-input" accept="image/*" multiple style="display: none;">
+
+            <div class="es-capture-actions">
+              <label class="btn btn-outline">
+                <i data-lucide="image"></i> Choose from gallery
+                <input type="file" id="gallery-file-input" accept="image/*" multiple hidden>
               </label>
-              <button class="btn btn-outline" id="webcam-toggle-btn" style="display:none;">Use Camera Live</button>
+              <button class="btn btn-outline" id="webcam-toggle-btn" style="display:none;">Close camera</button>
             </div>
 
-            <div id="gps-status" class="text-muted mt-2">📍 Requesting location access…</div>
-
-            <div class="thumbnails-container" id="media-thumbnails">
-              <!-- Thumbnail previews -->
-            </div>
+            <div id="gps-status" class="es-gps">📍 Finding your location…</div>
+            <div class="es-thumbs" id="media-thumbnails"></div>
           </div>
 
-          <!-- STEP 2: AI CLASSIFICATION -->
-          <div class="wizard-step-panel" id="step-2-panel" style="display: none;">
-            <h2>Step 2: AI Check</h2>
-            <p class="text-muted">Gemini checks that this is dumped waste and fills in the complaint.</p>
-            
-            <div class="ai-scanning-overlay" id="ai-scanning-view" style="display: none;">
-              <div class="scanning-image-box">
-                <img id="scanning-preview-img" src="" class="scanning-img">
-                <div class="scan-bar"></div>
-              </div>
-              <div class="scanning-text"><span class="spinner-sm"></span> Gemini is checking the photo…</div>
+          <!-- STEP 2: PHOTO CHECK -->
+          <div class="wizard-step-panel es-panel" id="step-2-panel" style="display: none;">
+            <h2 class="es-panel-title">Photo check</h2>
+            <p class="es-panel-sub">We check the photo and fill in the details. Change anything that looks wrong.</p>
+
+            <div class="es-checking" id="check-scanning-view" style="display: none;">
+              <img id="scanning-preview-img" src="" alt="">
+              <div class="es-checking-text"><span class="spinner-sm"></span> Checking the photo…</div>
             </div>
 
-            <div class="ai-results-form" id="ai-results-form" style="display: none;">
-              <div id="ai-check-banner" class="mb-3"></div>
+            <div id="check-results-form" style="display: none;">
+              <div id="photo-check-banner" class="es-banner-wrap"></div>
 
               <div class="form-group">
-                <label for="report-title">Suggested Title</label>
+                <label for="report-title">Title</label>
                 <input type="text" id="report-title" class="form-control" required>
               </div>
 
-              <div class="form-row">
-                <div class="form-group half-width">
-                  <label for="report-category">Category</label>
+              <div class="es-form-row">
+                <div class="form-group">
+                  <label for="report-category">Type of waste</label>
                   <select id="report-category" class="form-control">
                     ${Green.categoryOptionsHtml()}
                   </select>
                 </div>
-
-                <div class="form-group half-width">
-                  <label for="report-severity">Severity Level (1-5)</label>
+                <div class="form-group">
+                  <label for="report-severity">How bad is it?</label>
                   <select id="report-severity" class="form-control">
-                    <option value="1">1 (Very Minor)</option>
-                    <option value="2">2 (Minor)</option>
-                    <option value="3">3 (Moderate)</option>
-                    <option value="4">4 (Critical)</option>
-                    <option value="5">5 (Severe Hazard)</option>
+                    <option value="1">1 · Very minor</option>
+                    <option value="2">2 · Minor</option>
+                    <option value="3">3 · Moderate</option>
+                    <option value="4">4 · Serious</option>
+                    <option value="5">5 · Health hazard</option>
                   </select>
                 </div>
               </div>
 
-              <div class="form-group">
-                <label for="report-dept">Assigned Department</label>
-                <select id="report-dept" class="form-control" disabled>
-                  ${Green.departmentOptionsHtml()}
-                </select>
-              </div>
+              <select id="report-dept" class="form-control" disabled hidden>
+                ${Green.departmentOptionsHtml()}
+              </select>
+              <p class="es-hint" id="report-dept-hint"></p>
             </div>
           </div>
 
-          <!-- STEP 3: LOCATION SELECT -->
-          <div class="wizard-step-panel" id="step-3-panel" style="display: none;">
-            <h2>Step 3: Location</h2>
-            <p class="text-muted">Check the pin is on the dump. Drag it or tap the map to adjust.</p>
-            
-            <button class="btn btn-primary btn-block mb-3" id="gps-locate-btn">
-              <i data-lucide="navigation"></i> Auto-detect GPS Coordinates
+          <!-- STEP 3: LOCATION -->
+          <div class="wizard-step-panel es-panel" id="step-3-panel" style="display: none;">
+            <h2 class="es-panel-title">Where is it?</h2>
+            <p class="es-panel-sub">Make sure the pin is on the dump. Drag it or tap the map to move it.</p>
+
+            <button class="btn btn-outline es-btn-full" id="gps-locate-btn">
+              <i data-lucide="locate-fixed"></i> Use my current location
             </button>
 
-            <div class="report-map-container">
-              <div id="report-leaflet-map" style="width: 100%; height: 280px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);"></div>
-            </div>
+            <div id="report-leaflet-map" class="es-report-map"></div>
 
-            <div class="form-group mt-3">
-              <label for="report-address">Human-Readable Address</label>
-              <div class="input-with-action">
-                <input type="text" id="report-address" class="form-control" placeholder="Reverse geocoding..." required>
-                <button class="btn btn-secondary" id="address-lookup-btn">Lookup</button>
+            <div class="form-group">
+              <label for="report-address">Address</label>
+              <div class="es-input-action">
+                <input type="text" id="report-address" class="form-control" placeholder="Finding address…" required>
+                <button class="btn btn-secondary" id="address-lookup-btn">Find</button>
               </div>
             </div>
 
-            <div id="nearest-office-card" class="card mt-3" style="padding:14px;">Finding nearest BBMP office…</div>
+            <div id="nearest-office-card" class="es-office">Finding the nearest BBMP office…</div>
           </div>
 
-          <!-- STEP 4: DESCRIPTION & AUDIO -->
-          <div class="wizard-step-panel" id="step-4-panel" style="display: none;">
-            <h2>Step 4: Complaint Details</h2>
-            <p class="text-muted">Edit the AI description if needed, or add a voice note.</p>
-            
-            <div class="form-group">
-              <label for="complainer-email">Your email for updates (optional)</label>
-              <input type="email" id="complainer-email" class="form-control" placeholder="you@example.com">
-            </div>
+          <!-- STEP 4: DETAILS -->
+          <div class="wizard-step-panel es-panel" id="step-4-panel" style="display: none;">
+            <h2 class="es-panel-title">A few more details</h2>
+            <p class="es-panel-sub">Both are optional, but they help BBMP find and fix the spot.</p>
 
             <div class="form-group">
-              <label for="report-desc">Description (max 500 characters)</label>
-              <textarea id="report-desc" class="form-control" rows="5" maxlength="500" placeholder="Describe the waste, how long it has been there, nearby landmarks…"></textarea>
+              <label for="report-desc">Description</label>
+              <textarea id="report-desc" class="form-control" rows="4" maxlength="500" placeholder="What's there, how long it's been there, nearby landmarks…"></textarea>
             </div>
 
-            <div class="voice-transcribe-container">
+            <div class="es-voice">
               <button class="btn btn-outline" id="voice-record-btn">
                 <i data-lucide="mic" class="mic-icon"></i>
-                <span id="record-btn-text">Record Voice Note</span>
+                <span id="record-btn-text">Record a voice note</span>
               </button>
-              <div id="recording-status" class="recording-status" style="display: none;">
-                <span class="pulse-red-dot"></span> <span id="record-timer">0:00</span> / 1:00 (Recording...)
+              <div id="recording-status" class="es-voice-status" style="display: none;">
+                <span class="pulse-red-dot"></span> Recording <span id="record-timer">0:00</span> / 1:00
               </div>
-              <div id="voice-loader" class="voice-loader" style="display: none;">
-                <span class="spinner-sm"></span> Gemini is transcribing your voice note…
+              <div id="voice-loader" class="es-voice-status" style="display: none;">
+                <span class="spinner-sm"></span> Turning your voice note into text…
               </div>
+            </div>
+
+            <div class="form-group">
+              <label for="complainer-email">Your email for updates</label>
+              <input type="email" id="complainer-email" class="form-control" placeholder="you@example.com">
             </div>
           </div>
 
-          <!-- STEP 5: SUMMARY & SUBMIT -->
-          <div class="wizard-step-panel" id="step-5-panel" style="display: none;">
-            <h2>Step 5: Review & Send Complaint</h2>
-            <p class="text-muted">This is exactly what BBMP will receive.</p>
-            
-            <div class="summary-card" id="submission-summary-card">
-              <!-- Rendered dynamically -->
-            </div>
+          <!-- STEP 5: REVIEW -->
+          <div class="wizard-step-panel es-panel" id="step-5-panel" style="display: none;">
+            <h2 class="es-panel-title">Review and send</h2>
+            <p class="es-panel-sub">This is what BBMP will receive.</p>
+            <div class="es-summary" id="submission-summary-card"></div>
           </div>
 
-          <!-- Navigation buttons -->
-          <div class="wizard-buttons-row">
+          <div class="es-wizard-nav">
             <button class="btn btn-secondary" id="wizard-prev-btn" style="visibility: hidden;">Back</button>
             <button class="btn btn-primary" id="wizard-next-btn">Next</button>
           </div>
         </div>
 
         <!-- Duplicate warning dialog -->
-        <div class="modal-overlay" id="duplicate-modal" style="display: none;">
-          <div class="modal-card dialog-card">
-            <h2>Duplicate Report Detected</h2>
-            <p class="dialog-text" id="duplicate-dialog-text"></p>
-            <div class="dialog-buttons">
-              <button class="btn btn-secondary" id="duplicate-no-btn">No, Create New</button>
-              <button class="btn btn-primary" id="duplicate-yes-btn">Yes, Merge Report</button>
+        <div class="es-modal" id="duplicate-modal" style="display: none;">
+          <div class="es-modal-card es-dialog">
+            <h2 class="es-panel-title">Already reported nearby</h2>
+            <p class="es-panel-sub" id="duplicate-dialog-text"></p>
+            <div class="es-dialog-actions">
+              <button class="btn btn-secondary" id="duplicate-no-btn">Report separately</button>
+              <button class="btn btn-primary" id="duplicate-yes-btn">Add to that report</button>
             </div>
           </div>
         </div>
 
-        <!-- Success Screen Overlay -->
-        <div class="modal-overlay" id="success-overlay" style="display: none;">
-          <div class="success-screen">
-            <div class="success-icon-container">
-              <i data-lucide="check" class="success-icon"></i>
-            </div>
-            <h1 id="success-title">Complaint Raised!</h1>
-            <p id="success-issue-id" class="success-issue-id"></p>
-            <p id="success-points" class="success-points">+50 Points Added to Profile!</p>
-            <div class="sla-card" id="success-sla-card">
-              <!-- SLA dynamic details -->
-            </div>
-            <button class="btn btn-primary btn-block mt-4" id="success-close-btn">Back to Home Feed</button>
-          </div>
-        </div>
+        <!-- Thank-you screen (filled by awardPointsAndShowSuccess) -->
+        <div class="es-thanks" id="success-overlay" style="display: none;" aria-live="polite"></div>
       </div>
     `;
   },
@@ -234,15 +196,26 @@ const ReportPage = {
     this.setupVoiceListeners();
 
     const user = Auth.getCurrentUser();
-    document.getElementById('complainer-email').value = (user && user.email && !user.email.endsWith('@civicfix.gov')) ? user.email : '';
-    this.detectGPS(true);
+    document.getElementById('complainer-email').value = (user && user.email && !user.email.endsWith('@ecosort.gov')) ? user.email : '';
+    // "Report here" from the map page pre-fills the location
+    let prefill = null;
+    try { prefill = JSON.parse(sessionStorage.getItem('ecosort_report_prefill') || 'null'); } catch (e) { prefill = null; }
+    sessionStorage.removeItem('ecosort_report_prefill');
+    if (prefill && typeof prefill.lat === 'number' && typeof prefill.lng === 'number') {
+      this.locationData.lat = prefill.lat;
+      this.locationData.lng = prefill.lng;
+      this.gpsSource = 'map';
+      this.setGpsStatus('📍 Location set from the map');
+    } else {
+      this.detectGPS(true);
+    }
   },
 
   updateWizardUI() {
     // Progress Bar
     const progressFill = document.getElementById('wizard-progress-bar');
     const widthPercent = ((this.currentStep - 1) / 4) * 100;
-    progressFill.style.width = `${Math.max(10, widthPercent)}%`;
+    progressFill.style.width = `${widthPercent}%`;
 
     // Step dots
     document.querySelectorAll('.step-dot').forEach((dot, idx) => {
@@ -277,7 +250,7 @@ const ReportPage = {
     prevBtn.style.visibility = this.currentStep === 1 ? 'hidden' : 'visible';
     
     if (this.currentStep === 5) {
-      nextBtn.innerText = 'Send Complaint to BBMP';
+      nextBtn.innerText = 'Send complaint';
     } else {
       nextBtn.innerText = 'Next';
     }
@@ -304,10 +277,10 @@ const ReportPage = {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         webcamPreview.srcObject = stream;
         webcamPreview.style.display = 'block';
-        clickBox.querySelector('span').innerText = 'Click inside box to Snap Photo';
+        clickBox.querySelector('span').innerText = 'Tap again to take the photo';
         const camIcon = clickBox.querySelector('.camera-icon');
         if (camIcon) camIcon.style.display = 'none';
-        webcamBtn.style.display = 'inline-block';
+        webcamBtn.style.display = 'inline-flex';
       } catch (err) {
         console.warn('Webcam permission denied or unavailable, trigger file picker.', err);
         fileInput.click();
@@ -320,7 +293,7 @@ const ReportPage = {
         stream.getTracks().forEach(track => track.stop());
       }
       webcamPreview.style.display = 'none';
-      clickBox.querySelector('span').innerText = 'Tap to Capture Photo';
+      clickBox.querySelector('span').innerText = 'Tap to take a photo';
       const camIcon = clickBox.querySelector('.camera-icon');
       if (camIcon) camIcon.style.display = 'block';
       webcamBtn.style.display = 'none';
@@ -389,7 +362,7 @@ const ReportPage = {
     }
     video.style.display = 'none';
     const clickBox = document.getElementById('camera-click-box');
-    clickBox.querySelector('span').innerText = 'Tap to Capture Photo';
+    clickBox.querySelector('span').innerText = 'Tap to take a photo';
     const camIcon = clickBox.querySelector('.camera-icon');
     if (camIcon) camIcon.style.display = 'block';
     document.getElementById('webcam-toggle-btn').style.display = 'none';
@@ -397,7 +370,7 @@ const ReportPage = {
 
   addMediaThumbnail(dataUrl, name) {
     if (this.mediaFiles.length >= 5) {
-      App.showToast('Max Photos Reach', 'You can upload up to 5 photos.', 'warning');
+      App.showToast('Photo limit reached', 'You can add up to 5 photos.', 'warning');
       return;
     }
 
@@ -415,18 +388,18 @@ const ReportPage = {
     if (!container) return;
 
     container.innerHTML = this.mediaFiles.map((file, idx) => `
-      <div class="thumbnail-item">
-        <img src="${file.dataUrl}">
-        <button class="remove-btn" onclick="ReportPage.removeMediaThumbnail(${idx})">&times;</button>
+      <div class="es-thumb">
+        <img src="${file.dataUrl}" alt="Photo ${idx + 1}">
+        <button class="es-thumb-remove" onclick="ReportPage.removeMediaThumbnail(${idx})" aria-label="Remove photo">&times;</button>
       </div>
     `).join('');
   },
 
-  // STEP 2: AI dump check
+  // STEP 2: Photo check
   async triggerAIScan() {
     if (this.mediaFiles.length === 0) return;
-    const scanView = document.getElementById('ai-scanning-view');
-    const formView = document.getElementById('ai-results-form');
+    const scanView = document.getElementById('check-scanning-view');
+    const formView = document.getElementById('check-results-form');
     const nextBtn = document.getElementById('wizard-next-btn');
     document.getElementById('scanning-preview-img').src = this.mediaFiles[0].dataUrl;
     scanView.style.display = 'block';
@@ -438,67 +411,86 @@ const ReportPage = {
       a = await AI.analyzeDump(this.mediaFiles[0].dataUrl);
     } catch (err) {
       console.error(err);
-      App.showToast('AI unavailable', 'Fill in the details manually.', 'warning');
-      a = { is_dump: true, category: 'illegal_dumping', severity: 3, est_weight_kg: 0, suggested_title: '', description: '', confidence: 0, is_mock: true };
+      App.showToast('Photo check unavailable', 'Please fill in the details yourself.', 'warning');
+      a = { is_dump: true, category: 'illegal_dumping', severity: 3, est_weight_kg: 0, suggested_title: '', description: '', confidence: 0, is_mock: true, failed: true };
     }
     this.aiSuggestions = a;
 
-    document.getElementById('report-title').value = a.suggested_title;
+    document.getElementById('report-title').value = a.suggested_title || '';
     document.getElementById('report-category').value = a.category;
     document.getElementById('report-severity').value = a.severity;
     document.getElementById('report-dept').value = Green.departmentFor(a.category);
-    if (!document.getElementById('report-desc').value) document.getElementById('report-desc').value = a.description;
+    if (!document.getElementById('report-desc').value) document.getElementById('report-desc').value = a.description || '';
+    this.updateDeptHint();
 
-    const banner = document.getElementById('ai-check-banner');
+    const kg = Math.round(Number(a.est_weight_kg) || 0);
+    const banner = document.getElementById('photo-check-banner');
     banner.innerHTML = `
-      ${a.is_mock ? '<div class="green-warn mb-2"><strong>Demo mode:</strong> sample AI result (no Gemini key on the server).</div>' : ''}
+      ${a.is_mock && !a.failed ? '<div class="es-banner es-banner-info"><i data-lucide="info"></i><span>Sample result (demo mode)</span></div>' : ''}
       ${a.is_dump
-        ? `<div class="green-note">✅ Gemini confirms a public waste dump. Severity ${a.severity}/5, about ${Math.round(a.est_weight_kg)} kg (confidence ${Math.round(a.confidence * 100)}%).</div>`
-        : `<div class="green-warn">⚠️ This doesn't look like waste dumped in a public place.
-             <div class="mt-2" style="display:flex;gap:8px;flex-wrap:wrap;">
-               <button class="btn btn-secondary" id="ai-retake-btn">Retake photo</button>
-               <button class="btn btn-outline" id="ai-continue-btn">Continue anyway</button>
-             </div></div>`}`;
+        ? `<div class="es-banner es-banner-ok"><i data-lucide="check-circle-2"></i><span>Looks like a garbage dump · Severity ${a.severity}/5${kg ? ` · about ${kg} kg` : ''}</span></div>`
+        : `<div class="es-banner es-banner-warn"><i data-lucide="alert-triangle"></i>
+             <div><span>This doesn't look like waste dumped in a public place.</span>
+               <div class="es-banner-actions">
+                 <button class="btn btn-secondary btn-sm" id="check-retake-btn">Retake photo</button>
+                 <button class="btn btn-outline btn-sm" id="check-continue-btn">Continue anyway</button>
+               </div></div></div>`}`;
 
     scanView.style.display = 'none';
     formView.style.display = 'block';
     nextBtn.disabled = !a.is_dump;
     this.setupCategoryChangeListener();
+    if (window.lucide) window.lucide.createIcons();
 
     if (!a.is_dump) {
-      document.getElementById('ai-retake-btn').onclick = () => {
+      document.getElementById('check-retake-btn').onclick = () => {
         this.mediaFiles = [];
         this.renderThumbnails();
         this.currentStep = 1;
         nextBtn.disabled = false;
         this.updateWizardUI();
       };
-      document.getElementById('ai-continue-btn').onclick = () => {
+      document.getElementById('check-continue-btn').onclick = () => {
         nextBtn.disabled = false;
-        banner.innerHTML = '<div class="green-warn">Continuing without AI confirmation.</div>';
+        banner.innerHTML = '<div class="es-banner es-banner-info"><i data-lucide="info"></i><span>Okay, continuing with this photo.</span></div>';
+        if (window.lucide) window.lucide.createIcons();
       };
     }
+  },
+
+  updateDeptHint() {
+    const hint = document.getElementById('report-dept-hint');
+    const cat = document.getElementById('report-category');
+    if (hint && cat) hint.innerText = `Handled by BBMP ${Green.DEPARTMENTS[Green.departmentFor(cat.value)] || ''}`;
   },
 
   setupCategoryChangeListener() {
     document.getElementById('report-category').onchange = (e) => {
       document.getElementById('report-dept').value = Green.departmentFor(e.target.value);
+      this.updateDeptHint();
     };
   },
 
   async loadNearestOffice() {
     const card = document.getElementById('nearest-office-card');
     if (!card) return;
+    const esc = s => String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
     try {
       const res = await fetch(`${CONFIG.API_BASE}/api/offices/nearest?lat=${this.locationData.lat}&lng=${this.locationData.lng}`);
       this.office = await res.json();
-      card.innerHTML = `<strong>🏛️ Nearest office: ${this.office.name}</strong>
-        <div class="text-muted">${this.office.distance_km} km away · ${this.office.email_enabled
-          ? `complaint will be emailed to <code>${this.office.recipient}</code>`
-          : 'complaint will be registered in the app and shown on the officer dashboard'}</div>`;
+      card.innerHTML = `
+        <i data-lucide="landmark" class="es-office-icon"></i>
+        <div>
+          <div class="es-office-label">Nearest BBMP office · ${esc(this.office.distance_km)} km</div>
+          <div class="es-office-name">${esc(this.office.name)}</div>
+          <div class="es-hint">${this.office.email_enabled
+            ? `Your complaint will be emailed to ${esc(this.office.recipient)}`
+            : 'Your complaint will be registered and tracked in the app'}</div>
+        </div>`;
+      if (window.lucide) window.lucide.createIcons();
     } catch (err) {
       console.error(err);
-      card.innerHTML = '<span class="text-muted">Could not find the nearest office. Is the server running?</span>';
+      card.innerHTML = '<span class="es-hint">Could not find the nearest office. Please check your connection.</span>';
     }
   },
 
@@ -521,7 +513,7 @@ const ReportPage = {
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        if (silent && this.gpsSource === 'photo') return; // GPS from the photo wins over device GPS
+        if (silent && (this.gpsSource === 'photo' || this.gpsSource === 'map')) return; // photo/map location wins over device GPS
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         this.locationData.lat = lat;
@@ -706,7 +698,7 @@ const ReportPage = {
         this.isRecordingAudio = false;
         clearInterval(timerInterval);
         recStatus.style.display = 'none';
-        recordBtn.querySelector('span').innerText = 'Record Voice Note';
+        recordBtn.querySelector('span').innerText = 'Record a voice note';
         const micIcon = recordBtn.querySelector('.mic-icon');
         if (micIcon) {
           micIcon.classList.remove('pulse-red');
@@ -754,7 +746,7 @@ const ReportPage = {
         secondsElapsed = 0;
         timerText.innerText = '0:00';
         recStatus.style.display = 'block';
-        recordBtn.querySelector('span').innerText = 'Stop & Transcribe';
+        recordBtn.querySelector('span').innerText = 'Stop recording';
         const micIcon = recordBtn.querySelector('.mic-icon');
         if (micIcon) {
           micIcon.classList.add('pulse-red');
@@ -856,24 +848,30 @@ const ReportPage = {
   async renderSummary() {
     const card = document.getElementById('submission-summary-card');
     if (!card) return;
-    card.innerHTML = '<span class="spinner-sm"></span> Preparing complaint preview…';
-    const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    card.innerHTML = '<div class="es-hint"><span class="spinner-sm"></span> Preparing the complaint…</div>';
+    const esc = s => String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
     try {
       const res = await fetch(`${CONFIG.API_BASE}/api/complaints/preview`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ issue: this.buildIssueDraft() })
       });
       const p = await res.json();
       card.innerHTML = `
-        <div class="summary-item"><strong>${p.email_enabled ? 'To:' : 'Office:'}</strong>
-          <div>${p.email_enabled ? `${esc(p.to)} (${esc(p.office.name)})` : `${esc(p.office.name)} <span class="text-muted">(in-app complaint; email not configured)</span>`}</div></div>
-        <div class="summary-item"><strong>Subject:</strong> <div>${esc(p.subject)}</div></div>
-        <div class="summary-item"><strong>Photo:</strong>
-          <div class="thumbnails-container mt-1"><div class="thumbnail-item"><img src="${this.mediaFiles[0].dataUrl}"></div></div></div>
-        <div class="summary-item"><strong>Complaint letter:</strong>
-          <pre style="white-space:pre-wrap;font-family:inherit;font-size:0.85rem;max-height:260px;overflow:auto;">${esc(p.body)}</pre></div>`;
+        <div class="es-summary-top">
+          <img src="${this.mediaFiles[0].dataUrl}" alt="Your photo" class="es-summary-photo">
+          <dl class="es-summary-list">
+            <div><dt>${p.email_enabled ? 'To' : 'Office'}</dt>
+              <dd>${p.email_enabled ? `${esc(p.office.name)} <span class="es-hint">(${esc(p.to)})</span>` : `${esc(p.office.name)} <span class="es-hint">(tracked in app)</span>`}</dd></div>
+            <div><dt>Subject</dt><dd>${esc(p.subject)}</dd></div>
+            <div><dt>Location</dt><dd>${esc(this.locationData.address)}</dd></div>
+          </dl>
+        </div>
+        <details class="es-letter" open>
+          <summary>Complaint letter</summary>
+          <pre>${esc(p.body)}</pre>
+        </details>`;
     } catch (err) {
       console.error(err);
-      card.innerHTML = '<div class="green-warn">Could not load the preview. Is the server running?</div>';
+      card.innerHTML = '<div class="es-banner es-banner-warn"><span>Could not load the preview. Please check your connection.</span></div>';
     }
   },
 
@@ -912,7 +910,7 @@ const ReportPage = {
       const modal = document.getElementById('duplicate-modal');
       const dialogText = document.getElementById('duplicate-dialog-text');
       
-      dialogText.innerText = `A similar "${Green.label(category)}" complaint was already reported nearby ("${duplicate.title}"). Do you want to add your report to that one instead?`;
+      dialogText.innerText = `Someone already reported "${duplicate.title}" (${Green.label(category)}) within about 100 m. Add your report to it instead? You still earn your points.`;
       modal.style.display = 'flex';
 
       // Yes merge button
@@ -1033,7 +1031,7 @@ const ReportPage = {
       actor_role: user.role,
       action: 'reported',
       note: 'Garbage dump reported with photo and GPS location. (+50 points awarded)',
-      created_at: new Date().toISOString()
+      created_at: newIssue.created_at // keep it first in the timeline, before "Complaint raised"
     });
 
     // Award points
@@ -1041,64 +1039,140 @@ const ReportPage = {
   },
 
   async awardPointsAndShowSuccess(issueId, severity) {
+    const POINTS = 50;
     const user = Auth.getCurrentUser();
-    user.points = (user.points || 0) + 50;
-    
-    // Check badges
+    user.points = (user.points || 0) + POINTS;
+
+    // Badges
     const userBadges = await DB.getAll('badges');
     const myBadges = userBadges.filter(b => b.user_id === user.id);
 
-    // Welcome badge: First Reporter
     if (!myBadges.some(b => b.badge_type === 'first_reporter')) {
-      const bObj = {
+      await DB.put('badges', {
         id: 'badge_' + Date.now(),
         user_id: user.id,
         badge_type: 'first_reporter',
         awarded_at: new Date().toISOString()
-      };
-      await DB.put('badges', bObj);
+      });
       App.addNotification('Badge Awarded!', 'You earned the "First Reporter" badge!', 'success');
     }
 
-    // Check count of user reports to award Watchdog
     const allIssues = await DB.getAll('issues');
     const myReportsCount = allIssues.filter(i => i.reporter_id === user.id).length;
-    
     if (myReportsCount >= 10 && !myBadges.some(b => b.badge_type === 'watchdog')) {
-      const bObj = {
-        id: 'badge_' + Date.now(),
+      await DB.put('badges', {
+        id: 'badge_' + Date.now() + '_w',
         user_id: user.id,
         badge_type: 'watchdog',
         awarded_at: new Date().toISOString()
-      };
-      await DB.put('badges', bObj);
+      });
       App.addNotification('Badge Awarded!', 'You earned the "Watchdog" badge!', 'success');
     }
 
     await DB.put('users', user);
     await Auth.refreshUser();
 
-    // Show Success Screen
-    const successOverlay = document.getElementById('success-overlay');
-    const successIdEl = document.getElementById('success-issue-id');
-    const successSlaEl = document.getElementById('success-sla-card');
-    
-    const c = this.complaint;
-    document.getElementById('success-title').innerText = c && c.email_status === 'sent' ? 'Complaint Emailed to BBMP!' : 'Complaint Raised!';
-    successIdEl.innerText = c ? `Ticket ${c.ticket_id}` : `Issue ${issueId}`;
-    successSlaEl.innerHTML = c ? `
-      <strong>${c.email_status === 'sent' ? 'Emailed to' : 'Registered with'}:</strong> ${c.office_name}
-      <p class="sla-text">We're monitoring it. When BBMP sends a photo of the cleaned spot, AI verifies it and the complaint closes.
-      If there's no response within 5 days, BBMP is reminded and you're notified.</p>` : '';
+    // Rank among citizens, computed after the points were added
+    let rank = 0, citizenCount = 0;
+    try {
+      const citizens = (await DB.getAll('users'))
+        .filter(u => u.role === 'citizen')
+        .sort((a, b) => (b.points || 0) - (a.points || 0));
+      citizenCount = citizens.length;
+      rank = citizens.findIndex(u => u.id === user.id) + 1;
+    } catch (err) {
+      console.warn('Could not compute rank', err);
+    }
 
-    successOverlay.style.display = 'flex';
+    this.showThankYou({ issueId, points: POINTS, total: user.points, rank, citizenCount, complaint: this.complaint });
+  },
+
+  showThankYou({ issueId, points, total, rank, citizenCount, complaint }) {
+    const overlay = document.getElementById('success-overlay');
+    if (!overlay) return;
+    const esc = s => String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    const c = complaint;
+
+    // Leaf and confetti burst pieces
+    const symbols = ['🌱', '♻️', '🍃', '🎉', '💚', '🌿'];
+    const colors = ['var(--primary-color, #1E7B34)', 'var(--accent, #7CB342)', '#FBC02D', '#4FC3F7', '#FF8A65'];
+    const pieces = Array.from({ length: 28 }, (_, i) => {
+      const angle = (i / 28) * Math.PI * 2 + Math.random() * 0.4;
+      const dist = 110 + Math.random() * 160;
+      const x = Math.round(Math.cos(angle) * dist);
+      const y = Math.round(Math.sin(angle) * dist * 0.8 - 40);
+      const style = `--x:${x}px;--y:${y}px;--r:${Math.round(Math.random() * 540 - 270)}deg;--d:${(Math.random() * 0.25).toFixed(2)}s`;
+      return i % 3 === 0
+        ? `<span class="es-burst-piece es-burst-emoji" style="${style}">${symbols[Math.floor(i / 3) % symbols.length]}</span>`
+        : `<span class="es-burst-piece es-burst-dot" style="${style};background:${colors[i % colors.length]}"></span>`;
+    }).join('');
+
+    overlay.innerHTML = `
+      <div class="es-thanks-card" role="dialog" aria-modal="true" aria-labelledby="success-title">
+        <div class="es-burst" aria-hidden="true">${pieces}</div>
+        <div class="es-thanks-icon"><i data-lucide="party-popper"></i></div>
+        <h1 id="success-title" class="es-thanks-title">Thank you for contributing!</h1>
+        <p class="es-thanks-sub">You're helping keep Bengaluru clean. <span aria-hidden="true">🌱</span></p>
+
+        <div class="es-thanks-points">
+          <span class="es-thanks-plus">+${points}</span>
+          <span class="es-thanks-plus-label">points added</span>
+        </div>
+
+        <div class="es-thanks-stats">
+          <div class="es-thanks-stat">
+            <i data-lucide="leaf"></i>
+            <div><strong>${Number(total || 0).toLocaleString('en-IN')}</strong><span>total points</span></div>
+          </div>
+          ${rank ? `
+          <div class="es-thanks-stat">
+            <i data-lucide="trophy"></i>
+            <div><strong id="success-rank">Rank #${rank}</strong><span>of ${citizenCount} citizens</span></div>
+          </div>` : ''}
+        </div>
+
+        ${c ? `<p class="es-thanks-ticket" id="success-issue-id"><span class="es-chip es-chip-ticket">${esc(c.ticket_id)}</span>
+          ${c.email_status === 'sent' ? 'Emailed to' : 'Registered with'} ${esc(c.office_name)}</p>` : ''}
+
+        <div class="es-thanks-actions">
+          <button class="btn btn-primary" id="success-close-btn"><i data-lucide="home"></i> Back to Home</button>
+          <button class="btn btn-outline" id="success-view-btn"><i data-lucide="file-text"></i> View my complaint</button>
+        </div>
+      </div>`;
+
+    overlay.classList.remove('is-open', 'is-closing');
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
     if (window.lucide) window.lucide.createIcons();
+    void overlay.offsetHeight; // reflow so the entrance transition runs
+    overlay.classList.add('is-open');
 
-    // Close button router nav
-    document.getElementById('success-close-btn').onclick = () => {
-      successOverlay.style.display = 'none';
-      Router.navigate('#/home');
+    const close = (after) => {
+      overlay.classList.remove('is-open');
+      overlay.classList.add('is-closing');
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        overlay.classList.remove('is-closing');
+        document.body.style.overflow = '';
+        after();
+      }, 320);
     };
+
+    document.getElementById('success-close-btn').onclick = () => close(() => Router.navigate('#/home'));
+    document.getElementById('success-view-btn').onclick = () => close(() => {
+      Router.navigate('#/home');
+      // Wait for the home page to mount, then open the issue
+      let tries = 0;
+      const timer = setInterval(() => {
+        tries++;
+        if (document.getElementById('issue-modal') && window.HomePage) {
+          clearInterval(timer);
+          HomePage.openIssueDetails(issueId);
+        } else if (tries > 40) {
+          clearInterval(timer);
+        }
+      }, 100);
+    });
   }
 };
 

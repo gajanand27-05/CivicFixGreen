@@ -6,13 +6,13 @@ from email.utils import make_msgid
 
 def send(cfg, to, subject, body, cc=None, attachments=(), in_reply_to=None):
     msg = EmailMessage()
-    msg["From"] = f"CivicFix Green <{cfg.gmail_address}>"
+    msg["From"] = f"EcoSort <{cfg.gmail_address}>"
     msg["To"] = to
     if cc:
         msg["Cc"] = cc
     msg["Subject"] = subject
     msg["Reply-To"] = cfg.gmail_address
-    msg["Message-ID"] = make_msgid(domain="civicfix.green")
+    msg["Message-ID"] = make_msgid(domain="ecosort.app")
     if in_reply_to:
         msg["In-Reply-To"] = in_reply_to
         msg["References"] = in_reply_to

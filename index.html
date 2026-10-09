@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CivicFix Green | Report Garbage Dumps to BBMP</title>
+  <title>EcoSort | Report Garbage Dumps to BBMP</title>
   
   <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
-  <link rel="shortcut icon" href="assets/icon.svg">
+  <link rel="icon" type="image/png" href="assets/ecosort-favicon.png">
+  <link rel="apple-touch-icon" href="assets/ecosort-icon-192.png">
 
   <!-- PWA manifest & Mobile Meta -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1A56DB">
+  <meta name="theme-color" content="#1E7B34">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -19,8 +19,10 @@
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
-  <!-- Google Fonts & Main Stylesheet -->
-  <link rel="stylesheet" href="style.css">
+  <!-- Main Stylesheets -->
+  <link rel="stylesheet" href="style.css?v=11">
+  <link rel="stylesheet" href="css/citizen.css?v=11">
+  <link rel="stylesheet" href="css/officer.css?v=11">
   
   <!-- Leaflet CSS Fallback -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -35,29 +37,18 @@
     <!-- DESKTOP TOP NAV BAR (WEBSITE HEADER) -->
     <header class="desktop-header" id="desktop-top-nav">
       <div class="logo-section" onclick="Router.navigate('#/home')">
-        <svg viewBox="0 0 512 512" class="header-logo-icon">
-          <path d="M256,64 C160,64 80,144 80,240 C80,360 224,448 256,448 C288,448 432,360 432,240 C432,144 352,64 256,64 Z" fill="#1A56DB" />
-          <circle cx="256" cy="240" r="100" fill="#FFFFFF" />
-          <path d="M208,248 L238,278 L304,200" fill="none" stroke="#1A56DB" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        <span class="logo-text">CivicFix<span class="logo-badge">Green</span></span>
+        <img src="assets/ecosort-logo.png" alt="EcoSort" class="header-logo-img">
       </div>
 
       <nav class="desktop-nav-links">
-        <a href="#/home" class="nav-link"><i data-lucide="home"></i> Home Feed</a>
-        <a href="#/map" class="nav-link"><i data-lucide="map"></i> Interactive Map</a>
+        <a href="#/home" class="nav-link"><i data-lucide="home"></i> Home</a>
+        <a href="#/map" class="nav-link"><i data-lucide="map"></i> Map</a>
         <a href="#/public" class="nav-link"><i data-lucide="bar-chart-2"></i> City Board</a>
         <a href="#/leaderboard" class="nav-link"><i data-lucide="trophy"></i> Leaderboard</a>
-        <a href="#/report" class="nav-link"><i data-lucide="plus-circle"></i> Report Dump</a>
-        <a href="#/profile" class="nav-link"><i data-lucide="user"></i> Profile</a>
+        <a href="#/report" class="nav-link"><i data-lucide="plus-circle"></i> Report</a>
       </nav>
 
       <div class="desktop-actions">
-        <!-- Theme toggle -->
-        <button class="icon-btn" id="theme-toggle-header" title="Toggle Dark/Light Mode">
-          <i data-lucide="moon" id="theme-toggle-icon"></i>
-        </button>
-
         <!-- Notification bell -->
         <button class="icon-btn" id="notif-bell" title="Notifications">
           <i data-lucide="bell"></i>
@@ -75,18 +66,10 @@
     <!-- MOBILE HEADER BAR -->
     <header class="mobile-header">
       <div class="logo-section" onclick="Router.navigate('#/home')">
-        <svg viewBox="0 0 512 512" class="header-logo-icon">
-          <path d="M256,64 C160,64 80,144 80,240 C80,360 224,448 256,448 C288,448 432,360 432,240 C432,144 352,64 256,64 Z" fill="#1A56DB" />
-          <circle cx="256" cy="240" r="100" fill="#FFFFFF" />
-          <path d="M208,248 L238,278 L304,200" fill="none" stroke="#1A56DB" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        <span class="logo-text">CivicFix Green</span>
+        <img src="assets/ecosort-logo.png" alt="EcoSort" class="header-logo-img">
       </div>
-      <div class="mobile-actions" style="display: flex; align-items: center; gap: 10px;">
-        <button class="icon-btn" id="theme-toggle-mobile" title="Toggle Theme">
-          <i data-lucide="moon"></i>
-        </button>
-        <button class="icon-btn" id="notif-bell-mobile">
+      <div class="mobile-actions">
+        <button class="icon-btn" id="notif-bell-mobile" title="Notifications">
           <i data-lucide="bell"></i>
           <span class="badge" id="notif-badge-mobile" style="display: none;">0</span>
         </button>
@@ -117,7 +100,7 @@
       </a>
       <a href="#/leaderboard" class="nav-item">
         <i data-lucide="trophy"></i>
-        <span>Leaderboard</span>
+        <span>Ranks</span>
       </a>
       <a href="#/profile" class="nav-item">
         <i data-lucide="user"></i>
@@ -130,6 +113,7 @@
   <div class="notification-overlay-box card" id="notification-overlay">
     <div class="overlay-header">
       <h4>Notifications</h4>
+      <button class="overlay-close-btn" type="button" aria-label="Close notifications" onclick="document.getElementById('notification-overlay').classList.remove('active')">&times;</button>
     </div>
     <div class="notifications-list" id="notifications-list">
       <!-- Populated dynamically -->
@@ -157,27 +141,27 @@
   <script src="https://cdn.jsdelivr.net/npm/exifr@7/dist/lite.umd.js"></script>
 
   <!-- APPLICATION CODE FILES -->
-  <script src="js/config.js?v=10"></script>
-  <script src="js/categories.js?v=10"></script>
-  <script src="js/db.js?v=10"></script>
-  <script src="js/auth.js?v=10"></script>
-  <script src="js/ai.js?v=10"></script>
-  <script src="js/router.js?v=10"></script>
+  <script src="js/config.js?v=11"></script>
+  <script src="js/categories.js?v=11"></script>
+  <script src="js/db.js?v=11"></script>
+  <script src="js/auth.js?v=11"></script>
+  <script src="js/ai.js?v=11"></script>
+  <script src="js/router.js?v=11"></script>
 
   <!-- ROUTE CONTROLLERS -->
-  <script src="js/pages/splash.js?v=10"></script>
-  <script src="js/pages/login.js?v=10"></script>
-  <script src="js/pages/signup.js?v=10"></script>
-  <script src="js/pages/home.js?v=10"></script>
-  <script src="js/pages/report.js?v=10"></script>
-  <script src="js/pages/map.js?v=10"></script>
-  <script src="js/pages/leaderboard.js?v=10"></script>
-  <script src="js/pages/profile.js?v=10"></script>
-  <script src="js/pages/dashboard.js?v=10"></script>
-  <script src="js/pages/admin.js?v=10"></script>
-  <script src="js/pages/public.js?v=10"></script>
+  <script src="js/pages/splash.js?v=11"></script>
+  <script src="js/pages/login.js?v=11"></script>
+  <script src="js/pages/signup.js?v=11"></script>
+  <script src="js/pages/home.js?v=11"></script>
+  <script src="js/pages/report.js?v=11"></script>
+  <script src="js/pages/map.js?v=11"></script>
+  <script src="js/pages/leaderboard.js?v=11"></script>
+  <script src="js/pages/profile.js?v=11"></script>
+  <script src="js/pages/dashboard.js?v=11"></script>
+  <script src="js/pages/admin.js?v=11"></script>
+  <script src="js/pages/public.js?v=11"></script>
 
   <!-- COORDINATOR ENTRYPOINT -->
-  <script src="js/app.js?v=10"></script>
+  <script src="js/app.js?v=11"></script>
 </body>
 </html>

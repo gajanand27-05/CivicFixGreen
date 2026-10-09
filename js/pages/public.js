@@ -9,67 +9,39 @@ const PublicPage = {
   async render() {
     return `
       <div class="public-container">
-        <!-- Hero Section -->
-        <div class="public-hero">
+        <section class="pub-hero">
           <h1>Bengaluru Clean City Board</h1>
-          <p>Live waste-dump complaints, cleanups and BBMP response times across Bengaluru.</p>
-          <button class="btn btn-primary mt-3" onclick="Router.navigate('#/report')">
-            <i data-lucide="plus-circle"></i> Report a Garbage Dump
+          <p>How fast garbage dumps reported on EcoSort are being cleaned up.</p>
+          <button class="btn btn-primary" onclick="Router.navigate('#/report')">
+            <i data-lucide="camera"></i> Report a garbage dump
           </button>
+        </section>
+
+        <div class="pub-stats">
+          <div class="off-stat is-closed"><span class="off-stat-label">kg of waste cleared</span><span class="off-stat-value" id="pub-kg">0</span></div>
+          <div class="off-stat"><span class="off-stat-label">Complaints closed</span><span class="off-stat-value" id="pub-resolved">0</span></div>
+          <div class="off-stat"><span class="off-stat-label">Avg days to close</span><span class="off-stat-value" id="pub-days">0</span></div>
         </div>
 
-        <!-- City Statistics -->
-        <div class="metrics-grid mt-4">
-          <div class="metric-card card">
-            <div class="metric-header">
-              <span class="m-title">Dumps Reported</span>
-            </div>
-            <div class="metric-value color-primary" id="pub-total">0</div>
-          </div>
-          <div class="metric-card card">
-            <div class="metric-header">
-              <span class="m-title font-bold text-success">Complaints Closed</span>
-            </div>
-            <div class="metric-value color-success" id="pub-resolved">0</div>
-          </div>
-          <div class="metric-card card">
-            <div class="metric-header">
-              <span class="m-title">kg of Waste Cleared</span>
-            </div>
-            <div class="metric-value color-success" id="pub-kg">0</div>
-          </div>
-          <div class="metric-card card">
-            <div class="metric-header">
-              <span class="m-title">Avg Days to Close</span>
-            </div>
-            <div class="metric-value" style="color:#8B5CF6;" id="pub-days">0</div>
-          </div>
-        </div>
+        <ul class="pub-facts" id="pub-facts" hidden></ul>
 
-        <!-- Public Map -->
-        <div class="public-map-card card mt-4">
-          <h3>Live Waste Dumps Map</h3>
-          <p class="text-muted small mb-3">Red: open, amber: cleanup in progress, green: cleared.</p>
-          <div id="public-google-map" style="width:100%; height:320px; border-radius:12px;"></div>
-        </div>
-
-        <!-- Visual Resolutions Showcase -->
-        <div class="public-gallery-card card mt-4">
-          <h3>Recently Cleaned Spots</h3>
-          <p class="text-muted mb-4">Before-and-after photos of cleanups, verified by AI.</p>
-          <div class="resolutions-showcase-row" id="public-resolutions-row">
-            <!-- Populated dynamically -->
+        <section class="off-card">
+          <div class="pub-section-head">
+            <h3>Dumps on the map</h3>
+            <div class="map-legend">
+              <span><i class="map-legend-dot is-open"></i>Open</span>
+              <span><i class="map-legend-dot is-progress"></i>In progress</span>
+              <span><i class="map-legend-dot is-closed"></i>Cleaned</span>
+            </div>
           </div>
-        </div>
+          <div id="public-google-map" class="pub-map"></div>
+        </section>
 
-        <!-- Transparency Reports Downloads -->
-        <div class="reports-downloads-card card mt-4 mb-5">
-          <h3>Published Monthly Reports</h3>
-          <p class="text-muted mb-3">Monthly waste complaint and cleanup summaries for Bengaluru.</p>
-          <div class="reports-list-grid" id="public-reports-grid">
-            <!-- Populated dynamically -->
-          </div>
-        </div>
+        <section class="off-card">
+          <h3>Recent cleanups</h3>
+          <p class="text-muted small">Before and after photos of spots the city has cleaned.</p>
+          <div class="pub-cleanups" id="public-resolutions-row"></div>
+        </section>
       </div>
     `;
   },
@@ -82,62 +54,51 @@ const PublicPage = {
 
   async loadPublicData() {
     const issues = await DB.getAll('issues');
-    const reports = await DB.getAll('monthly_reports');
-
-    const total = issues.length;
-    const resolved = issues.filter(i => i.status === 'resolved').length;
-
-    document.getElementById('pub-total').innerText = total;
-    document.getElementById('pub-resolved').innerText = resolved;
 
     const closed = issues.filter(i => i.status === 'resolved');
     const kg = closed.reduce((sum, i) => sum + (Number(i.est_weight_kg) || 0), 0);
     const avgDays = closed.length ? closed.reduce((s, i) => s + Green.daysOpen(i), 0) / closed.length : 0;
+    document.getElementById('pub-resolved').innerText = closed.length;
+
+    // City facts from the latest published report (if any)
+    try {
+      const reports = await DB.getAll('monthly_reports');
+      const ctx = (reports.find(r => r.city_context) || {}).city_context;
+      const factsEl = document.getElementById('pub-facts');
+      if (ctx && factsEl) {
+        const n = (v) => Number(v).toLocaleString('en-IN');
+        const facts = [];
+        if (ctx.daily_waste_tonnes) facts.push(`Bengaluru produces about <strong>${n(ctx.daily_waste_tonnes)} tonnes</strong> of waste a day.`);
+        if (ctx.garbage_blackspots_sep_2025 && ctx.garbage_blackspots_feb_2026) facts.push(`Garbage black spots fell from <strong>${n(ctx.garbage_blackspots_sep_2025)}</strong> (Sep 2025) to <strong>${n(ctx.garbage_blackspots_feb_2026)}</strong> (Feb 2026).`);
+        if (facts.length) {
+          factsEl.innerHTML = facts.map(f => `<li><i data-lucide="info"></i><span>${f}</span></li>`).join('');
+          factsEl.hidden = false;
+        }
+      }
+    } catch (e) { /* facts are optional */ }
     document.getElementById('pub-kg').innerText = Math.round(kg).toLocaleString('en-IN');
     document.getElementById('pub-days').innerText = avgDays.toFixed(1);
 
-    // Load reports
-    const reportsGrid = document.getElementById('public-reports-grid');
-    const publicReports = reports.filter(r => r.is_public);
-    
-    if (publicReports.length === 0) {
-      reportsGrid.innerHTML = '<p class="text-muted">No monthly reports published yet.</p>';
-    } else {
-      reportsGrid.innerHTML = publicReports.map(r => `
-        <div class="report-download-item">
-          <div style="display:flex; align-items:center; gap:12px;">
-            <div class="pdf-icon-placeholder"><i data-lucide="file-text" style="color:#EF4444;"></i></div>
-            <div>
-              <strong>Report for ${r.month === 5 ? 'May 2026' : 'June 2026'}</strong>
-              <div class="text-muted small">${r.total_reported} complaints / ${r.total_resolved} closed</div>
-            </div>
-          </div>
-          <button class="btn btn-outline btn-xs" onclick="App.showToast('Downloaded PDF', 'Mock PDF download trigger.', 'success')">
-            <i data-lucide="download"></i> PDF
-          </button>
-        </div>
-      `).join('');
-    }
-
     // Load before-after gallery
-    const resolvedIssues = issues.filter(i => i.status === 'resolved' && i.after_photo_url);
+    const resolvedIssues = issues
+      .filter(i => i.status === 'resolved' && i.after_photo_url)
+      .sort((a, b) => new Date(b.resolved_at) - new Date(a.resolved_at));
     const galleryRow = document.getElementById('public-resolutions-row');
 
     if (resolvedIssues.length === 0) {
-      galleryRow.innerHTML = '<p class="text-muted">No cleanups verified yet.</p>';
+      galleryRow.innerHTML = '<p class="text-muted">No cleanups yet.</p>';
     } else {
-      galleryRow.innerHTML = resolvedIssues.slice(0, 3).map(i => `
-        <div class="resolution-showcase-card card">
-          <div class="side-by-side-gallery">
-            <img src="${i.before_photo_url}" class="col-photo" title="Before cleanup">
-            <img src="${i.after_photo_url}" class="col-photo" title="After cleanup">
+      galleryRow.innerHTML = resolvedIssues.slice(0, 6).map(i => `
+        <article class="pub-cleanup" onclick="PublicPage.viewIssueDetails('${i.id}')">
+          <div class="pub-before-after">
+            <figure><img src="${i.before_photo_url}" alt="Before cleanup" loading="lazy"><figcaption>Before</figcaption></figure>
+            <figure><img src="${i.after_photo_url}" alt="After cleanup" loading="lazy"><figcaption>After</figcaption></figure>
           </div>
-          <div class="showcase-content">
-            <h4>${i.title.substring(0, 25)}...</h4>
-            <span class="category-tag mt-2">${Green.label(i.category)}</span>
-            <p class="text-muted small mt-1">Cleaned: ${new Date(i.resolved_at).toLocaleDateString()}</p>
+          <div class="pub-cleanup-body">
+            <strong>${i.title}</strong>
+            <span class="text-muted small">${Green.label(i.category)} · cleaned ${i.resolved_at ? new Date(i.resolved_at).toLocaleDateString('en-IN') : ''}</span>
           </div>
-        </div>
+        </article>
       `).join('');
     }
   },
@@ -149,8 +110,8 @@ const PublicPage = {
     if (MapHelper.isGoogleMapsAvailable()) {
       container.innerHTML = '';
       this.map = new google.maps.Map(container, {
-        center: { lat: 12.9740, lng: 77.6415 },
-        zoom: 14,
+        center: { lat: 12.97, lng: 77.62 },
+        zoom: 11,
         disableDefaultUI: true,
         zoomControl: true
       });
@@ -178,7 +139,7 @@ const PublicPage = {
           });
 
           const popupContent = `
-            <div class="map-popup-card" style="color:#0f172a; font-family:sans-serif;">
+            <div class="map-popup-card" style="color:var(--text-color); font-family:sans-serif;">
               <h4 style="margin:2px 0; font-size:12px; font-weight:700;">${issue.title.substring(0, 30)}...</h4>
               <span class="popup-status status-${issue.status}" style="font-size:9px; padding:1px 4px;">${Green.statusLabel(issue.status)}</span>
               <button class="btn btn-primary btn-xs mt-2" style="width:100%; display:block;" onclick="PublicPage.viewIssueDetails('${issue.id}')">View Details</button>
@@ -195,6 +156,7 @@ const PublicPage = {
 
           this.markersGroup.push(marker);
         });
+        if (window.fitMapToIssues) window.fitMapToIssues(this.map, issues, 14);
       });
     } else {
       if (this.map && typeof this.map.remove === 'function') {
@@ -202,13 +164,13 @@ const PublicPage = {
       }
       container.innerHTML = '';
 
-      const lat = 12.9740;
-      const lng = 77.6415;
+      const lat = 12.97;
+      const lng = 77.62;
 
       this.map = L.map(container, {
         zoomControl: true,
         attributionControl: false
-      }).setView([lat, lng], 14);
+      }).setView([lat, lng], 11);
 
       const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
@@ -233,7 +195,7 @@ const PublicPage = {
           });
 
           const popupContent = `
-            <div class="map-popup-card" style="color:#0f172a; font-family:sans-serif;">
+            <div class="map-popup-card" style="color:var(--text-color); font-family:sans-serif;">
               <h4 style="margin:2px 0; font-size:12px; font-weight:700;">${issue.title.substring(0, 30)}...</h4>
               <span class="popup-status status-${issue.status}" style="font-size:9px; padding:1px 4px;">${Green.statusLabel(issue.status)}</span>
               <button class="btn btn-primary btn-xs mt-2" style="width:100%; display:block;" onclick="PublicPage.viewIssueDetails('${issue.id}')">View Details</button>
@@ -244,6 +206,7 @@ const PublicPage = {
           marker.addTo(this.map);
           this.markersGroup.push(marker);
         });
+        if (window.fitMapToIssues) window.fitMapToIssues(this.map, issues, 14);
       });
     }
 
@@ -358,8 +321,8 @@ const PublicIssuePage = {
               <div class="log-entry">
                 <span class="log-dot"></span>
                 <div class="log-details">
-                  <div class="log-title">${log.action.toUpperCase()}</div>
-                  <div class="log-note">${log.note}</div>
+                  <div class="log-title">${PublicIssuePage.actionLabel(log.action)}</div>
+                  <div class="log-note">${PublicIssuePage.cleanNote(log.note)}</div>
                   <div class="log-time">${new Date(log.created_at).toLocaleString()}</div>
                 </div>
               </div>
@@ -368,7 +331,7 @@ const PublicIssuePage = {
         </div>
 
         <div class="mt-4 border-top pt-4 text-center">
-          <p class="text-muted">Want to upvote or co-report this dump? <a href="#/login">Login to CivicFix Green</a></p>
+          <p class="text-muted">Want to upvote or co-report this dump? <a href="#/login">Login to EcoSort</a></p>
           <button class="btn btn-primary mt-3" onclick="HomePage.shareIssue('${issue.id}')"><i data-lucide="share-2"></i> Share Report</button>
         </div>
       </div>
@@ -435,9 +398,21 @@ const PublicIssuePage = {
     }, 100);
   },
 
+  actionLabel(action) {
+    const labels = {
+      reported: 'Reported', assigned: 'Assigned', status_changed: 'Status updated',
+      resolved: 'Closed', commented: 'Comment', ai_validated: 'Cleanup photo checked'
+    };
+    return labels[action] || String(action || '').replace(/_/g, ' ').replace(/^./, c => c.toUpperCase());
+  },
+
+  cleanNote(note) {
+    return String(note || '').replace(/^AI comparison:/i, 'Cleanup photo check:');
+  },
+
   updateOpenGraphTags(issue) {
     // Dynamic Meta Head Injector
-    document.title = `${issue.title} | CivicFix Green City Board`;
+    document.title = `${issue.title} | EcoSort City Board`;
     
     // Set Open Graph tags
     this.setMetaTag('og:title', issue.title);

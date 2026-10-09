@@ -1,7 +1,7 @@
 {
-  "name": "civicfix-pwa",
+  "name": "ecosort-pwa",
   "version": "1.0.0",
-  "description": "CivicFix community issue reporting and resolution platform PWA.",
+  "description": "EcoSort community issue reporting and resolution platform PWA.",
   "main": "index.html",
   "scripts": {
     "dev": "npx -y http-server -p 8080 -c-1",

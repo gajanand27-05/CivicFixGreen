@@ -1,5 +1,7 @@
 // js/pages/home.js
-// Home Feed and Issue Details
+// Home feed and issue details
+
+const homeEsc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const HomePage = {
   isPublic: true,
@@ -8,109 +10,97 @@ const HomePage = {
   currentSort: 'recent',
   searchQuery: '',
 
+  // Human-friendly titles for timeline entries
+  LOG_TITLES: {
+    reported: 'Dump reported',
+    complaint_raised: 'Complaint raised',
+    reminder_sent: 'Reminder sent',
+    bbmp_replied: 'BBMP replied',
+    cleanup_checked: 'Cleanup photo checked',
+    ai_validated: 'Cleanup verified',
+    photo_rejected: 'Cleanup photo not accepted',
+    resolved: 'Closed',
+    assigned: 'Assigned to an officer',
+    status_changed: 'Status updated',
+    email_failed: 'Email not delivered',
+    commented: 'Comment'
+  },
+
+  ACTOR_NAMES: { system: 'EcoSort', authority: 'BBMP', officer: 'BBMP officer', admin: 'Admin', citizen: 'Citizen' },
+
   async render() {
     return `
-      <div class="feed-container">
-        <!-- Modern Web Hero Banner -->
-        <div class="home-hero-banner">
-          <div class="hero-badge"><i data-lucide="sparkles"></i> AI for a Cleaner Bengaluru</div>
-          <h1 class="hero-title">Spot a Garbage Dump? Snap It. We'll Chase It.</h1>
-          <p class="hero-subtitle">CivicFix Green traces the location, emails a formal complaint to the nearest BBMP office, and follows up until the spot is verified clean.</p>
-          <div class="hero-actions">
-            <button class="btn btn-primary" onclick="Router.navigate('#/report')">
+      <div class="es-home">
+        <section class="es-hero">
+          <h1 class="es-hero-title">Spotted a garbage dump? Report it in a minute.</h1>
+          <p class="es-hero-text">Snap a photo and we'll raise a complaint with the nearest BBMP office, then follow up until the spot is clean.</p>
+          <div class="es-hero-actions">
+            <button class="btn btn-primary es-btn-lg" onclick="Router.navigate('#/report')">
               <i data-lucide="camera"></i> Report a Garbage Dump
             </button>
-            <button class="btn btn-outline" onclick="Router.navigate('#/map')">
-              <i data-lucide="map"></i> Explore Live Map
-            </button>
-            <button class="btn btn-secondary" onclick="Router.navigate('#/public')">
-              <i data-lucide="bar-chart-2"></i> Transparency Board
+            <button class="btn btn-outline es-btn-lg" onclick="Router.navigate('#/map')">
+              <i data-lucide="map"></i> View Map
             </button>
           </div>
-          <div class="hero-stats-row">
-            <div class="hero-stat-item">
-              <span class="hero-stat-val" id="hero-stat-total">0</span>
-              <span class="hero-stat-label">Dumps Reported</span>
-            </div>
-            <div class="hero-stat-item">
-              <span class="hero-stat-val" id="hero-stat-resolved">0</span>
-              <span class="hero-stat-label">Verified Cleanups</span>
-            </div>
-            <div class="hero-stat-item">
-              <span class="hero-stat-val" id="hero-stat-kg">0</span>
-              <span class="hero-stat-label">kg Waste Cleared</span>
-            </div>
-            <div class="hero-stat-item">
-              <span class="hero-stat-val" id="hero-stat-overdue">0</span>
-              <span class="hero-stat-label">Overdue (5+ days)</span>
-            </div>
+          <div class="es-stats">
+            <div class="es-stat"><span class="es-stat-val" id="hero-stat-total">0</span><span class="es-stat-label">Dumps reported</span></div>
+            <div class="es-stat"><span class="es-stat-val" id="hero-stat-resolved">0</span><span class="es-stat-label">Cleaned up</span></div>
+            <div class="es-stat"><span class="es-stat-val" id="hero-stat-kg">0</span><span class="es-stat-label">kg cleared</span></div>
+            <div class="es-stat"><span class="es-stat-val" id="hero-stat-overdue">0</span><span class="es-stat-label">Overdue</span></div>
           </div>
-        </div>
-          </div>
-        </div>
+        </section>
 
-        <!-- Search & Filter Header -->
-        <div class="feed-header">
-          <div class="search-bar-container">
-            <i data-lucide="search" class="search-icon"></i>
-            <input type="text" id="feed-search" placeholder="Search issues, category, ward, address..." class="search-input">
-          </div>
-          
-          <div class="filter-sort-row">
-            <!-- Filter Pills -->
-            <div class="filter-pills-container scroll-x" id="filter-pills">
-              <button class="pill active" data-filter="all">All</button>
-              <button class="pill" data-filter="open">Open</button>
-              <button class="pill" data-filter="in_progress">In Progress</button>
-              <button class="pill" data-filter="resolved">Closed</button>
-              <button class="pill" data-filter="near_me">Near Me</button>
-              <button class="pill" data-filter="my_reports">My Reports</button>
-            </div>
-            
-            <!-- Sort Selector -->
-            <div class="sort-selector-container">
-              <i data-lucide="sliders-horizontal" class="sort-icon"></i>
-              <select id="feed-sort" class="sort-select">
-                <option value="recent">Most Recent</option>
-                <option value="upvotes">Most Upvoted</option>
-                <option value="severity">Most Critical</option>
+        <section class="es-feed">
+          <div class="es-feed-toolbar">
+            <h2 class="es-feed-title">Recent reports</h2>
+            <div class="es-feed-controls">
+              <div class="es-search">
+                <i data-lucide="search"></i>
+                <input type="search" id="feed-search" placeholder="Search by place or title" aria-label="Search reports">
+              </div>
+              <select id="feed-sort" class="es-select" aria-label="Sort reports">
+                <option value="recent">Newest</option>
+                <option value="upvotes">Most upvoted</option>
+                <option value="severity">Most severe</option>
               </select>
             </div>
           </div>
-        </div>
 
-        <!-- Issues List -->
-        <div class="issues-list" id="issues-list-container">
-          <!-- Populated dynamically -->
-        </div>
-
-        <!-- Issue Details Modal -->
-        <div class="modal-overlay" id="issue-modal" style="display: none;">
-          <div class="modal-card">
-            <!-- Modal header and content will be populated dynamically -->
+          <div class="es-pills" id="filter-pills">
+            <button class="es-pill active" data-filter="all">All</button>
+            <button class="es-pill" data-filter="open">Open</button>
+            <button class="es-pill" data-filter="in_progress">In progress</button>
+            <button class="es-pill" data-filter="resolved">Closed</button>
+            <button class="es-pill" data-filter="near_me">Near me</button>
+            <button class="es-pill" data-filter="my_reports">My reports</button>
           </div>
+
+          <div class="es-feed-grid" id="issues-list-container"></div>
+        </section>
+
+        <div class="es-modal" id="issue-modal" style="display: none;" onclick="if (event.target === this) HomePage.closeIssueDetails()">
+          <div class="es-modal-card" role="dialog" aria-modal="true"></div>
         </div>
       </div>
     `;
   },
 
   async mount() {
+    this.currentFilter = 'all';
+    this.searchQuery = '';
     this.setupListeners();
     await this.loadIssues();
   },
 
   setupListeners() {
-    // Search listener
-    const searchInput = document.getElementById('feed-search');
-    searchInput.addEventListener('input', (e) => {
+    document.getElementById('feed-search').addEventListener('input', (e) => {
       this.searchQuery = e.target.value.toLowerCase();
       this.renderList();
     });
 
-    // Filter pills listeners
-    const pills = document.querySelectorAll('#filter-pills .pill');
+    const pills = document.querySelectorAll('#filter-pills .es-pill');
     pills.forEach(pill => {
-      pill.addEventListener('click', (e) => {
+      pill.addEventListener('click', () => {
         pills.forEach(p => p.classList.remove('active'));
         pill.classList.add('active');
         this.currentFilter = pill.getAttribute('data-filter');
@@ -118,18 +108,21 @@ const HomePage = {
       });
     });
 
-    // Sort listener
     const sortSelect = document.getElementById('feed-sort');
+    sortSelect.value = this.currentSort;
     sortSelect.addEventListener('change', (e) => {
       this.currentSort = e.target.value;
       this.renderList();
     });
 
-    // Listen for database updates (like upvote increments or status advances from polling)
-    window.addEventListener('db-update', async () => {
-      if (!document.getElementById('issues-list-container')) return; // feed not on screen
-      await this.loadIssues();
-    });
+    // Register the db-update listener once (mount runs on every visit)
+    if (!this._dbListener) {
+      this._dbListener = async () => {
+        if (!document.getElementById('issues-list-container')) return; // feed not on screen
+        await this.loadIssues();
+      };
+      window.addEventListener('db-update', this._dbListener);
+    }
   },
 
   renderHeroStats() {
@@ -154,110 +147,64 @@ const HomePage = {
     if (!container) return;
 
     const user = Auth.getCurrentUser();
-
-    // 1. Apply Filter
     let filtered = [...this.issues];
 
-    if (this.currentFilter === 'open') {
-      filtered = filtered.filter(i => i.status === 'open');
-    } else if (this.currentFilter === 'in_progress') {
-      filtered = filtered.filter(i => i.status === 'in_progress');
-    } else if (this.currentFilter === 'resolved') {
-      filtered = filtered.filter(i => i.status === 'resolved');
+    if (['open', 'in_progress', 'resolved'].includes(this.currentFilter)) {
+      filtered = filtered.filter(i => i.status === this.currentFilter);
     } else if (this.currentFilter === 'my_reports') {
-      filtered = filtered.filter(i => i.reporter_id === user.id);
-    } else if (this.currentFilter === 'near_me') {
-      // Filter by user's ward
-      if (user && user.ward) {
-        filtered = filtered.filter(i => i.ward === user.ward);
-      }
+      filtered = user ? filtered.filter(i => i.reporter_id === user.id) : [];
+    } else if (this.currentFilter === 'near_me' && user && user.ward) {
+      filtered = filtered.filter(i => i.ward === user.ward);
     }
 
-    // 2. Apply Search
     if (this.searchQuery) {
-      filtered = filtered.filter(i => 
-        i.title.toLowerCase().includes(this.searchQuery) ||
-        i.description.toLowerCase().includes(this.searchQuery) ||
-        i.category.toLowerCase().includes(this.searchQuery) ||
-        i.address.toLowerCase().includes(this.searchQuery) ||
-        i.ward.toLowerCase().includes(this.searchQuery)
+      const q = this.searchQuery;
+      filtered = filtered.filter(i =>
+        [i.title, i.description, Green.label(i.category), i.address, i.ward, i.complaint && i.complaint.ticket_id]
+          .some(v => (v || '').toLowerCase().includes(q))
       );
     }
 
-    // 3. Apply Sort
-    if (this.currentSort === 'recent') {
-      filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    } else if (this.currentSort === 'upvotes') {
-      filtered.sort((a, b) => b.upvote_count - a.upvote_count);
+    if (this.currentSort === 'upvotes') {
+      filtered.sort((a, b) => (b.upvote_count || 0) - (a.upvote_count || 0));
     } else if (this.currentSort === 'severity') {
-      filtered.sort((a, b) => b.severity - a.severity);
+      filtered.sort((a, b) => (b.severity || 0) - (a.severity || 0));
+    } else {
+      filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
 
     if (filtered.length === 0) {
       container.innerHTML = `
-        <div class="empty-feed">
-          <i data-lucide="package-open" class="empty-icon"></i>
-          <h3>No issues found</h3>
-          <p>Try resetting filters or search terms.</p>
-        </div>
-      `;
+        <div class="es-empty">
+          <i data-lucide="leaf"></i>
+          <h3>Nothing here yet</h3>
+          <p>Try another filter, or report a dump you've seen.</p>
+        </div>`;
       if (window.lucide) window.lucide.createIcons();
       return;
     }
 
-    // Render Cards
-    container.innerHTML = filtered.map(issue => {
-      const severityClass = `severity-${issue.severity}`;
-      const statusClass = `status-${issue.status}`;
-      const timeStr = App.formatTimeAgo(issue.created_at);
-      const isUpvoted = false; // We will check user's verification table upvotes
-
-      const categoryIcon = Green.icon(issue.category);
-
-      return `
-        <div class="issue-card" onclick="HomePage.openIssueDetails('${issue.id}')">
-          <div class="issue-card-media">
-            <img src="${issue.media_urls[0] || 'assets/icon.svg'}" loading="lazy" alt="${issue.title}">
-            <span class="severity-badge ${severityClass}">Severity ${issue.severity}</span>
+    container.innerHTML = filtered.map(issue => `
+      <article class="es-card" onclick="HomePage.openIssueDetails('${issue.id}')" tabindex="0"
+        onkeydown="if (event.key === 'Enter') HomePage.openIssueDetails('${issue.id}')">
+        <div class="es-card-media">
+          <img src="${(issue.media_urls && issue.media_urls[0]) || 'assets/icon.svg'}" loading="lazy" alt="">
+          <span class="es-status es-status-${issue.status}">${Green.statusLabel(issue.status)}</span>
+        </div>
+        <div class="es-card-body">
+          <div class="es-chips">
+            <span class="es-chip"><i data-lucide="${Green.icon(issue.category)}"></i>${homeEsc(Green.label(issue.category))}</span>
+            ${issue.complaint ? `<span class="es-chip es-chip-ticket">${homeEsc(issue.complaint.ticket_id)}</span>` : ''}
+            ${Green.isOverdue(issue) ? '<span class="es-chip es-chip-warn">Overdue</span>' : ''}
           </div>
-          
-          <div class="issue-card-content">
-            <div class="card-meta-row">
-              <span class="category-tag">
-                <i data-lucide="${categoryIcon}"></i>
-                ${Green.label(issue.category)}
-              </span>
-              ${issue.complaint ? `<span class="ticket-chip">${issue.complaint.ticket_id}</span>` : ''}
-              <span class="status-pill ${statusClass}">${Green.statusLabel(issue.status)}</span>
-            </div>
-            
-            <h3 class="issue-card-title">${issue.title}</h3>
-            <p class="issue-card-desc">${issue.description.substring(0, 100)}${issue.description.length > 100 ? '...' : ''}</p>
-            
-            <div class="card-footer-row">
-              <span class="location-label">
-                <i data-lucide="map-pin"></i>
-                ${issue.ward}
-              </span>
-              <span class="time-label">${timeStr}</span>
-            </div>
-            
-            <div class="card-actions-row" onclick="event.stopPropagation()">
-              <button class="action-btn upvote-btn" onclick="HomePage.upvoteIssue('${issue.id}', this)">
-                <i data-lucide="thumbs-up"></i>
-                <span class="count">${issue.upvote_count}</span>
-              </button>
-              <div class="secondary-stats">
-                <span class="stat-item">
-                  <i data-lucide="message-square"></i>
-                  ${(this.verifications || []).filter(v => v.issue_id === issue.id && v.type === 'comment').length} comments
-                </span>
-              </div>
-            </div>
+          <h3 class="es-card-title">${homeEsc(issue.title)}</h3>
+          <div class="es-card-meta">
+            <span class="es-card-place"><i data-lucide="map-pin"></i>${homeEsc(issue.ward || 'Bengaluru')}</span>
+            <span>${App.formatTimeAgo(issue.created_at)}</span>
           </div>
         </div>
-      `;
-    }).join('');
+      </article>
+    `).join('');
 
     if (window.lucide) window.lucide.createIcons();
   },
@@ -265,28 +212,23 @@ const HomePage = {
   async upvoteIssue(issueId, btnElement) {
     const user = Auth.getCurrentUser();
     if (!user) {
-      App.showToast('Sign in required', 'Please sign in to upvote issues and earn rewards (+5 pts).', 'info');
+      App.showToast('Sign in required', 'Please sign in to upvote and earn +5 points.', 'info');
       Router.navigate('#/login');
       return;
     }
 
-    // Check if user already verified/upvoted this issue
     const verifications = await DB.getAll('verifications');
-    const alreadyUpvoted = verifications.some(v => v.issue_id === issueId && v.user_id === user.id && v.type === 'upvote');
-
-    if (alreadyUpvoted) {
-      App.showToast('Already Upvoted', 'You can only upvote this issue once.', 'warning');
+    if (verifications.some(v => v.issue_id === issueId && v.user_id === user.id && v.type === 'upvote')) {
+      App.showToast('Already upvoted', 'You can upvote a report only once.', 'warning');
       return;
     }
 
-    // Add upvote
     const issue = await DB.get('issues', issueId);
     if (!issue) return;
 
-    issue.upvote_count++;
+    issue.upvote_count = (issue.upvote_count || 0) + 1;
     await DB.put('issues', issue);
 
-    // Save verification
     await DB.put('verifications', {
       id: 'v_up_' + Date.now(),
       issue_id: issueId,
@@ -296,38 +238,53 @@ const HomePage = {
       created_at: new Date().toISOString()
     });
 
-    // Award +5 points to the upvoting user
     user.points = (user.points || 0) + 5;
     await DB.put('users', user);
     await Auth.refreshUser();
 
-    // Add activity log
     await DB.put('issue_timeline', {
       id: 't_up_' + Date.now(),
       issue_id: issueId,
       actor_id: user.id,
       actor_role: user.role,
-      action: 'commented', // Using general verification logs
-      note: `Upvoted the report. (+5 points awarded)`,
+      action: 'commented',
+      note: 'Upvoted the report. (+5 points awarded)',
       created_at: new Date().toISOString()
     });
 
     App.showToast('Upvoted!', 'You earned +5 points.', 'success');
 
-    // Update locally and in UI
-    btnElement.classList.add('voted');
-    btnElement.querySelector('.count').innerText = issue.upvote_count;
-    
-    // Refresh issues list and header
+    if (btnElement) {
+      btnElement.classList.add('voted');
+      const count = btnElement.querySelector('.count');
+      if (count) count.innerText = issue.upvote_count;
+    }
+
     await this.loadIssues();
     Router.updateNavigationLayout(window.location.hash, Auth.getCurrentUser());
+  },
+
+  logTitle(log) {
+    if (log.action === 'commented') {
+      if (/^Upvoted/i.test(log.note || '')) return 'Upvoted';
+      if (/^Co-signed/i.test(log.note || '')) return 'Co-signed';
+    }
+    return this.LOG_TITLES[log.action] || String(log.action || 'Update').replace(/_/g, ' ').replace(/^./, c => c.toUpperCase());
+  },
+
+  logNote(note) {
+    return String(note || '')
+      .replace(/AI comparison/gi, 'Photo check')
+      .replace(/\b(AI|Gemini|Gemma)\b[- ]?/g, '')
+      .replace(/\s*\(\+\d+ points awarded\)/i, '');
   },
 
   async openIssueDetails(issueId) {
     const issue = await DB.get('issues', issueId);
     if (!issue) return;
+    const modal = document.getElementById('issue-modal');
+    if (!modal) return;
 
-    // Load timeline and verifications
     const timeline = await DB.getAll('issue_timeline');
     const verifications = await DB.getAll('verifications');
     const users = await DB.getAll('users');
@@ -335,194 +292,126 @@ const HomePage = {
     const issueTimeline = timeline
       .filter(t => t.issue_id === issueId)
       .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-
     const comments = verifications
       .filter(v => v.issue_id === issueId && v.type === 'comment')
       .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
     const reporter = users.find(u => u.id === issue.reporter_id);
     const currentUser = Auth.getCurrentUser();
-
-    const modal = document.getElementById('issue-modal');
-    const card = modal.querySelector('.modal-card');
-
-    let timelineSteps = ['Reported', 'Verified', 'Assigned', 'In Progress', 'Closed'];
-    let currentStepIndex = 0;
-    if (issue.status === 'open') currentStepIndex = 1;
-    if (issue.status === 'in_progress') currentStepIndex = 3;
-    if (issue.status === 'resolved') currentStepIndex = 4;
-    if (issue.status === 'rejected') {
-      timelineSteps = ['Reported', 'Rejected'];
-      currentStepIndex = 1;
-    }
-
     const isResolved = issue.status === 'resolved';
+    const c = issue.complaint;
+    const media = issue.media_urls || [];
 
-    // Build timeline HTML
-    const timelineHtml = timelineSteps.map((step, idx) => {
-      const isActive = idx <= currentStepIndex;
-      const isCurrent = idx === currentStepIndex;
-      let stateClass = '';
-      if (isCurrent) stateClass = 'current';
-      else if (isActive) stateClass = 'completed';
+    const photosHtml = (isResolved && issue.after_photo_url) ? `
+      <div class="es-before-after">
+        <figure><img src="${issue.before_photo_url || media[0] || ''}" alt="Before"><figcaption class="es-tag-before">Before</figcaption></figure>
+        <figure><img src="${issue.after_photo_url}" alt="After cleanup"><figcaption class="es-tag-after">After</figcaption></figure>
+      </div>` : `
+      <div class="es-gallery">
+        ${media.map(url => `<img src="${url}" alt="Photo of the dump">`).join('')}
+      </div>`;
 
-      return `
-        <div class="timeline-step ${stateClass}">
-          <div class="step-circle">${idx + 1}</div>
-          <div class="step-label">${step}</div>
+    const complaintHtml = c ? `
+      <div class="es-complaint ${Green.isOverdue(issue) ? 'is-overdue' : ''}">
+        <div class="es-complaint-head">
+          <span class="es-chip es-chip-ticket">${homeEsc(c.ticket_id)}</span>
+          <span class="es-muted">${c.email_status === 'sent' ? 'Emailed to' : 'Registered with'} <strong>${homeEsc(c.office_name)}</strong>${c.email_status === 'sent' ? '' : ' (tracked in app)'}</span>
         </div>
-      `;
-    }).join('');
-
-    // Side-by-side photos if resolved
-    let photosHtml = `
-      <div class="modal-gallery scroll-x">
-        ${issue.media_urls.map(url => `<img src="${url}" class="modal-gallery-img">`).join('')}
-      </div>
-    `;
-
-    if (isResolved && issue.after_photo_url) {
-      photosHtml = `
-        <div class="before-after-container">
-          <div class="photo-side">
-            <span class="side-badge danger">BEFORE</span>
-            <img src="${issue.before_photo_url}" class="side-img">
-          </div>
-          <div class="photo-side">
-            <span class="side-badge success">AFTER FIX</span>
-            <img src="${issue.after_photo_url}" class="side-img">
-          </div>
+        <div class="es-complaint-stats">
+          <div><strong>${Green.daysOpen(issue)}</strong><span>days open</span></div>
+          <div><strong>${c.reminder_count || 0}</strong><span>reminders</span></div>
+          <div><strong>${c.replies || 0}</strong><span>BBMP replies</span></div>
         </div>
-      `;
-    }
+        ${Green.isOverdue(issue) ? `<div class="es-overdue-note"><i data-lucide="alarm-clock"></i> Overdue: BBMP is being reminded every ${Green.REMINDER_DAYS} days.</div>` : ''}
+      </div>` : '';
 
+    const card = modal.querySelector('.es-modal-card');
     card.innerHTML = `
-      <div class="modal-header">
-        <h2>Issue Details</h2>
-        <button class="modal-close" onclick="HomePage.closeIssueDetails()">&times;</button>
+      <div class="es-modal-head">
+        <div class="es-chips">
+          <span class="es-status es-status-${issue.status} es-status-inline">${Green.statusLabel(issue.status)}</span>
+          <span class="es-chip"><i data-lucide="${Green.icon(issue.category)}"></i>${homeEsc(Green.label(issue.category))}</span>
+        </div>
+        <button class="es-icon-btn" onclick="HomePage.closeIssueDetails()" aria-label="Close"><i data-lucide="x"></i></button>
       </div>
 
-      <div class="modal-body scroll-y">
+      <div class="es-modal-body">
         ${photosHtml}
 
-        <div class="modal-section">
-          <div class="modal-meta-row">
-            <span class="status-pill status-${issue.status}">${Green.statusLabel(issue.status)}</span>
-            <span class="severity-badge severity-${issue.severity}">Severity ${issue.severity}</span>
-            <span class="ward-tag"><i data-lucide="map-pin"></i> ${issue.ward}</span>
-          </div>
-
-          <h1 class="modal-issue-title">${issue.title}</h1>
-          <p class="modal-issue-desc">${issue.description}</p>
-          <p class="modal-issue-address"><strong>Address:</strong> ${issue.address}</p>
-
-          <div class="reporter-pill">
-            <img src="${reporter ? reporter.avatar_url : 'https://api.dicebear.com/7.x/bottts/svg?seed=system'}" class="reporter-avatar">
-            <div class="reporter-info">
-              <span class="rep-name">Reported by ${reporter ? reporter.name : 'Citizen'}</span>
-              <span class="rep-time">${new Date(issue.created_at).toLocaleString()}</span>
-            </div>
+        <div class="es-section">
+          <h2 class="es-modal-title">${homeEsc(issue.title)}</h2>
+          ${issue.description ? `<p class="es-modal-desc">${homeEsc(issue.description)}</p>` : ''}
+          <p class="es-modal-address"><i data-lucide="map-pin"></i> ${homeEsc(issue.address || issue.ward || '')}</p>
+          <div class="es-reporter">
+            <img src="${reporter ? reporter.avatar_url : 'assets/icon.svg'}" alt="">
+            <span>Reported by <strong>${homeEsc(reporter ? reporter.name : 'a citizen')}</strong> · ${App.formatTimeAgo(issue.created_at)}</span>
           </div>
         </div>
 
-        <!-- Map section -->
-        <div class="modal-section">
-          <h3>Location Map</h3>
-          <div id="modal-map" class="details-mini-map"></div>
+        ${complaintHtml}
+
+        <div class="es-section">
+          <div id="modal-map" class="es-mini-map"></div>
         </div>
 
-        <!-- Timeline section -->
-        <div class="modal-section">
-          <h3>Progress Timeline</h3>
-          ${issue.complaint ? `
-          <div class="green-note mb-3">
-            <strong>Complaint ${issue.complaint.ticket_id}</strong>
-            ${issue.complaint.email_status === 'sent'
-              ? `emailed to ${issue.complaint.office_name}`
-              : `registered with ${issue.complaint.office_name} (email not sent — tracked in app)`}
-            on ${new Date(issue.complaint.sent_at).toLocaleString()}<br>
-            Days open: ${Green.daysOpen(issue)} · Reminders sent: ${issue.complaint.reminder_count || 0} · BBMP replies: ${issue.complaint.replies || 0}
-            ${Green.isOverdue(issue) ? '<br><strong style="color:#E11D48;">Overdue: reminders active</strong>' : ''}
-          </div>` : ''}
-          <div class="visual-timeline">
-            ${timelineHtml}
-          </div>
-          <div class="text-timeline-logs">
-            ${issueTimeline.map(log => `
-              <div class="log-entry">
-                <span class="log-dot"></span>
-                <div class="log-details">
-                  <div class="log-title">${log.action.toUpperCase()} - ${log.actor_role.toUpperCase()}</div>
-                  <div class="log-note">${log.note}</div>
-                  <div class="log-time">${new Date(log.created_at).toLocaleString()}</div>
-                </div>
-              </div>
-            `).join('')}
-          </div>
+        <div class="es-section">
+          <h3 class="es-section-title">Progress</h3>
+          <ol class="es-timeline">
+            ${issueTimeline.length === 0 ? '<li class="es-muted">No updates yet.</li>' : issueTimeline.map(log => `
+              <li class="es-log es-log-${homeEsc(log.action)}">
+                <div class="es-log-title">${homeEsc(this.logTitle(log))}</div>
+                ${this.logNote(log.note) ? `<div class="es-log-note">${homeEsc(this.logNote(log.note))}</div>` : ''}
+                <div class="es-log-time">${new Date(log.created_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })} · ${homeEsc(this.ACTOR_NAMES[log.actor_role] || 'Citizen')}</div>
+              </li>`).join('')}
+          </ol>
         </div>
 
-        <!-- Comments section -->
-        <div class="modal-section">
-          <h3>Community Updates & Comments</h3>
-          <div class="comments-list" id="modal-comments-list">
-            ${comments.length === 0 ? '<p class="empty-comments">No comments yet. Be the first to comment!</p>' : comments.map(c => {
-              const commenter = users.find(u => u.id === c.user_id);
+        <div class="es-section">
+          <h3 class="es-section-title">Comments</h3>
+          <div class="es-comments" id="modal-comments-list">
+            ${comments.length === 0 ? '<p class="es-muted">No comments yet.</p>' : comments.map(cm => {
+              const commenter = users.find(u => u.id === cm.user_id);
               return `
-                <div class="comment-item">
-                  <img src="${commenter ? commenter.avatar_url : 'https://api.dicebear.com/7.x/bottts/svg?seed=system'}" class="comment-avatar">
-                  <div class="comment-bubble">
-                    <div class="comment-meta">
-                      <span class="comment-author">${commenter ? commenter.name : 'Citizen'}</span>
-                      <span class="comment-time">${App.formatTimeAgo(c.created_at)}</span>
-                    </div>
-                    <div class="comment-text">${c.content}</div>
+                <div class="es-comment">
+                  <img src="${commenter ? commenter.avatar_url : 'assets/icon.svg'}" alt="">
+                  <div class="es-comment-bubble">
+                    <div class="es-comment-meta"><strong>${homeEsc(commenter ? commenter.name : 'Citizen')}</strong><span>${App.formatTimeAgo(cm.created_at)}</span></div>
+                    <div>${homeEsc(cm.content)}</div>
                   </div>
-                </div>
-              `;
+                </div>`;
             }).join('')}
           </div>
-
           ${currentUser ? `
-            <form id="comment-form" class="modal-comment-form">
-              <textarea id="comment-textarea" placeholder="Add an official update or comment... (Earn +10 points)" rows="3" max="500" required></textarea>
-              <button type="submit" class="btn btn-primary">Submit Comment</button>
+            <form id="comment-form" class="es-comment-form">
+              <textarea id="comment-textarea" class="form-control" placeholder="Add a comment (+10 points)" rows="2" maxlength="500" required></textarea>
+              <button type="submit" class="btn btn-primary">Post</button>
             </form>
-          ` : '<p class="login-prompt"><a href="#/login">Log in</a> to write comments and verify issues.</p>'}
+          ` : '<p class="es-muted"><a href="#/login">Log in</a> to comment.</p>'}
         </div>
 
-        <!-- Re-evaluate Section for Reporter -->
         ${isResolved && currentUser && currentUser.id === issue.reporter_id ? `
-          <div class="modal-section unresolved-section border-top">
-            <h3>Not satisfied with the resolution?</h3>
-            <p class="text-muted mb-3">If you feel the work is inadequate or incomplete, you can mark the issue back as unresolved.</p>
-            <div id="unresolved-form" class="unresolved-form">
-              <textarea id="unresolved-reason" placeholder="Provide a reason why the fix is insufficient..." rows="2" required></textarea>
-              <button class="btn btn-danger mt-2" onclick="HomePage.markAsUnresolved('${issue.id}')">Mark as Unresolved</button>
-            </div>
+          <div class="es-section es-reopen">
+            <h3 class="es-section-title">Not cleaned properly?</h3>
+            <p class="es-muted">Tell us what's wrong and we'll reopen the complaint.</p>
+            <textarea id="unresolved-reason" class="form-control" placeholder="What still needs to be done?" rows="2" required></textarea>
+            <button class="btn btn-danger mt-2" onclick="HomePage.markAsUnresolved('${issue.id}')">Reopen complaint</button>
           </div>
         ` : ''}
-
       </div>
 
-      <div class="modal-actions">
-        <button class="btn btn-outline" onclick="HomePage.shareIssue('${issue.id}')">
-          <i data-lucide="share-2"></i> Share
-        </button>
-        <button class="btn btn-primary" onclick="HomePage.upvoteIssue('${issue.id}', document.querySelector('.upvote-btn'))">
-          <i data-lucide="thumbs-up"></i> Upvote (+5 pts)
-        </button>
+      <div class="es-modal-foot">
+        <button class="btn btn-outline" onclick="HomePage.shareIssue('${issue.id}')"><i data-lucide="share-2"></i> Share</button>
+        <button class="btn btn-primary" onclick="HomePage.upvoteIssue('${issue.id}', this)"><i data-lucide="thumbs-up"></i> Upvote · <span class="count">${issue.upvote_count || 0}</span></button>
       </div>
     `;
 
     modal.style.display = 'flex';
+    modal.classList.remove('is-closing');
+    document.body.style.overflow = 'hidden';
     if (window.lucide) window.lucide.createIcons();
 
-    // Render mini map inside details modal
-    setTimeout(() => {
-      this.initMiniMap(issue.lat, issue.lng, issue.category, issue.status);
-    }, 100);
+    setTimeout(() => this.initMiniMap(issue.lat, issue.lng, issue.status), 100);
 
-    // Comment submission event
     const commentForm = card.querySelector('#comment-form');
     if (commentForm) {
       commentForm.addEventListener('submit', async (e) => {
@@ -531,129 +420,118 @@ const HomePage = {
         const text = textarea.value.trim();
         if (!text) return;
 
-        // Submit comment
-        const commentVal = {
+        await DB.put('verifications', {
           id: 'v_comment_' + Date.now(),
           issue_id: issueId,
           user_id: currentUser.id,
           type: 'comment',
           content: text,
           created_at: new Date().toISOString()
-        };
-        await DB.put('verifications', commentVal);
+        });
 
-        // Timeline Log
         await DB.put('issue_timeline', {
           id: 't_comment_' + Date.now(),
           issue_id: issueId,
           actor_id: currentUser.id,
           actor_role: currentUser.role,
           action: 'commented',
-          note: `Commented: "${text.substring(0, 45)}..."`,
+          note: `Commented: "${text.substring(0, 45)}${text.length > 45 ? '…' : ''}"`,
           created_at: new Date().toISOString()
         });
 
-        // Award +10 points
         currentUser.points = (currentUser.points || 0) + 10;
         await DB.put('users', currentUser);
         await Auth.refreshUser();
 
-        App.showToast('Comment Posted!', 'You earned +10 points.', 'success');
-
-        // Clear and reload modal details
+        App.showToast('Comment posted', 'You earned +10 points.', 'success');
         textarea.value = '';
         await this.loadIssues();
         await this.openIssueDetails(issueId);
-        
-        // Refresh routing layout for navigation points display
         Router.updateNavigationLayout(window.location.hash, Auth.getCurrentUser());
       });
     }
   },
 
-  initMiniMap(lat, lng, category, status) {
+  initMiniMap(lat, lng, status) {
     const container = document.getElementById('modal-map');
-    if (!container) return;
+    if (!container || typeof lat !== 'number' || typeof lng !== 'number') return;
 
-    const map = new google.maps.Map(container, {
-      center: { lat: lat, lng: lng },
-      zoom: 15,
-      disableDefaultUI: true,
-      zoomControl: false
-    });
-
-    let color = '#EF4444';
+    let color = '#E53935';
     if (status === 'in_progress') color = '#F59E0B';
-    if (status === 'resolved') color = '#10B981';
+    if (status === 'resolved') color = '#1E7B34';
 
-    new google.maps.Marker({
-      position: { lat: lat, lng: lng },
-      map: map,
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        fillColor: color,
-        fillOpacity: 0.9,
-        scale: 8,
-        strokeColor: '#FFFFFF',
-        strokeWeight: 2
+    try {
+      if (window.MapHelper && MapHelper.isGoogleMapsAvailable()) {
+        const map = new google.maps.Map(container, { center: { lat, lng }, zoom: 15, disableDefaultUI: true });
+        new google.maps.Marker({
+          position: { lat, lng }, map,
+          icon: { path: google.maps.SymbolPath.CIRCLE, fillColor: color, fillOpacity: 0.9, scale: 8, strokeColor: '#FFFFFF', strokeWeight: 2 }
+        });
+      } else if (window.L) {
+        if (this._miniMap) { try { this._miniMap.remove(); } catch (e) {} }
+        this._miniMap = L.map(container, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false }).setView([lat, lng], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(this._miniMap);
+        L.circleMarker([lat, lng], { radius: 9, color: '#FFFFFF', weight: 2, fillColor: color, fillOpacity: 0.9 }).addTo(this._miniMap);
       }
-    });
+    } catch (err) {
+      console.warn('Mini map unavailable', err);
+      container.style.display = 'none';
+    }
   },
 
   closeIssueDetails() {
     const modal = document.getElementById('issue-modal');
-    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = '';
+    if (!modal || modal.style.display === 'none') return;
+    modal.classList.add('is-closing');
+    setTimeout(() => {
+      modal.style.display = 'none';
+      modal.classList.remove('is-closing');
+    }, 200);
   },
 
   async markAsUnresolved(issueId) {
     const reasonText = document.getElementById('unresolved-reason').value.trim();
     if (!reasonText) {
-      App.showToast('Reason required', 'Please explain why the resolution is insufficient.', 'warning');
+      App.showToast('Reason required', 'Please say what still needs to be done.', 'warning');
       return;
     }
 
     const issue = await DB.get('issues', issueId);
     if (!issue) return;
 
-    issue.status = 'open'; // Re-opened
+    issue.status = 'open';
     issue.resolved_at = null;
     issue.after_photo_url = null;
     issue.updated_at = new Date().toISOString();
     await DB.put('issues', issue);
 
     const currentUser = Auth.getCurrentUser();
-
-    // Timeline Log
     await DB.put('issue_timeline', {
       id: 't_unresolved_' + Date.now(),
       issue_id: issueId,
       actor_id: currentUser.id,
       actor_role: currentUser.role,
       action: 'status_changed',
-      note: `Marked as Unresolved by Reporter. Reason: "${reasonText}"`,
+      note: `Reopened by the reporter: "${reasonText}"`,
       created_at: new Date().toISOString()
     });
 
-    App.showToast('Issue Re-opened', 'Authorities have been notified.', 'danger');
-    
-    // Refresh modal
+    App.showToast('Complaint reopened', 'BBMP will be notified.', 'danger');
     await this.openIssueDetails(issueId);
-    // Refresh home list
     await this.loadIssues();
   },
 
   shareIssue(issueId) {
     const shareUrl = `${window.location.origin}${window.location.pathname}#/issue/${issueId}`;
-    
     if (navigator.clipboard) {
       navigator.clipboard.writeText(shareUrl).then(() => {
-        App.showToast('Link Copied!', 'Share link copied to clipboard.', 'success');
+        App.showToast('Link copied', 'Share link copied to clipboard.', 'success');
       }).catch(err => console.error('Copy failed', err));
     } else {
-      App.showToast('Share Link', shareUrl, 'info');
+      App.showToast('Share link', shareUrl, 'info');
     }
   }
 };
 
-// Expose globally
 window.HomePage = HomePage;

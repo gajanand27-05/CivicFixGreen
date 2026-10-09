@@ -135,7 +135,7 @@ def analyze_dump(cfg, image_data_url):
 
 def verify_cleanup(cfg, before, after):
     if not cfg.gemini_api_key:
-        return {"is_resolved": True, "confidence": 0.9, "reason": "Demo mode: no AI key configured.", "is_mock": True}
+        return {"is_resolved": True, "confidence": 0.9, "reason": "Demo mode: automatic photo check is not configured.", "is_mock": True}
     try:
         r = _gemini(cfg, VERIFY_PROMPT, [before, after], VERIFY_SCHEMA)
         return {"is_resolved": r.get("is_resolved") is True,
@@ -143,7 +143,7 @@ def verify_cleanup(cfg, before, after):
                 "reason": str(r.get("reason", "")), "is_mock": False}
     except Exception as e:
         print("[ai] verify failed:", e)
-        return {"is_resolved": False, "confidence": 0.0, "reason": f"AI check failed ({e}); needs manual review.", "is_mock": False}
+        return {"is_resolved": False, "confidence": 0.0, "reason": f"Automatic photo check failed ({e}); needs manual review.", "is_mock": False}
 
 
 def predict_hotspots(cfg, issues):

@@ -6,7 +6,7 @@ import re
 from email import policy
 from email.utils import parseaddr
 
-TICKET_RE = re.compile(r"CFG-\d{4,}")
+TICKET_RE = re.compile(r"ECO-\d{4,}")
 
 
 def strip_quoted(text):
@@ -41,7 +41,7 @@ def fetch_unseen(cfg):
     with imaplib.IMAP4_SSL("imap.gmail.com") as imap:
         imap.login(cfg.gmail_address, cfg.gmail_app_password)
         imap.select("INBOX")
-        _, data = imap.search(None, '(UNSEEN SUBJECT "CFG-")')
+        _, data = imap.search(None, '(UNSEEN SUBJECT "ECO-")')
         for num in data[0].split():
             _, msg_data = imap.fetch(num, "(RFC822)")  # fetching marks it \Seen
             out.append(parse_message(msg_data[0][1]))
