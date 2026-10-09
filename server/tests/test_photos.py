@@ -48,3 +48,19 @@ def test_open_store_uses_sqlite_path_by_default(tmp_path, monkeypatch):
     s = open_store(tmp_path / "default.db")
     s.put("meta", {"id": "k"})
     assert (tmp_path / "x.db").exists()
+
+
+def test_db_batch_endpoint_applies_ops(tmp_path, monkeypatch):
+    monkeypatch.setenv("ECOSORT_DB_PATH", str(tmp_path / "api.db"))
+    import importlib
+    from fastapi.testclient import TestClient
+    import server.main as main
+    importlib.reload(main)
+    client = TestClient(main.app)
+    r = client.post("/api/db-batch", json={"ops": [
+        {"op": "clear", "store": "issues"},
+        {"op": "put", "store": "issues", "doc": {"id": "i1", "before_photo_url": JPEG}},
+        {"op": "put", "store": "meta", "doc": {"id": "seed", "version": "v"}}]})
+    assert r.json() == {"ok": True, "applied": 3}
+    assert client.get("/api/db/issues/i1").json()["before_photo_url"].startswith("/api/photos/")
+    assert client.post("/api/db-batch", json={"ops": [{"op": "put", "store": "mail_accounts", "doc": {"id": "x"}}]}).status_code == 404

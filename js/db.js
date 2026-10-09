@@ -29,6 +29,7 @@ const DB = {
   },
 
   put(storeName, value) {
+    if (this._batch) { this._batch.push({ op: 'put', store: storeName, doc: value }); return Promise.resolve(value); }
     return dbApi('PUT', `${storeName}/${encodeURIComponent(value.id)}`, value);
   },
 
@@ -37,6 +38,7 @@ const DB = {
   },
 
   clear(storeName) {
+    if (this._batch) { this._batch.push({ op: 'clear', store: storeName }); return Promise.resolve(); }
     return dbApi('POST', `${storeName}/clear`);
   },
 
@@ -49,6 +51,7 @@ const DB = {
     }
 
     console.log('Seeding server DB...');
+    this._batch = []; // collect every seed write and send them in one request (fast on remote hosts)
     for (const store of ['users', 'issues', 'verifications', 'issue_timeline', 'badges', 'hotspot_predictions', 'monthly_reports', 'notifications']) {
       await this.clear(store);
     }
@@ -620,7 +623,13 @@ const DB = {
       await this.put('monthly_reports', r);
     }
 
-    await this.put('meta', { id: 'seed', version: SEED_VERSION });
+    const ops = this._batch;
+    this._batch = null;
+    ops.push({ op: 'put', store: 'meta', doc: { id: 'seed', version: SEED_VERSION } });
+    const res = await fetch(`${CONFIG.API_BASE}/api/db-batch`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ops })
+    });
+    if (!res.ok) throw new Error(`Seeding failed (${res.status})`);
     console.log('Server DB seeded:', SEED_VERSION);
   },
 

@@ -72,6 +72,25 @@ def db_put(name: str, doc_id: str, doc: dict = Body(...)):
     return doc
 
 
+@app.post("/api/db-batch")
+def db_batch(body: dict = Body(...)):
+    """Apply many writes in one request (used to seed demo data quickly on remote hosts)."""
+    ops = body.get("ops") or []
+    for op in ops:
+        _check(op.get("store"))
+    for op in ops:
+        if op.get("op") == "clear":
+            store.clear(op["store"])
+        elif op.get("op") == "put":
+            doc = op["doc"]
+            if op["store"] in ("issues", "users"):
+                photos.externalize(doc)
+            store.put(op["store"], doc)
+        else:
+            raise HTTPException(400, f"Unknown op {op.get('op')}")
+    return {"ok": True, "applied": len(ops)}
+
+
 @app.delete("/api/db/{name}/{doc_id}")
 def db_delete(name: str, doc_id: str):
     _check(name)
