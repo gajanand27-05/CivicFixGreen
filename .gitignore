@@ -7,3 +7,8 @@ antigravity-ide/
 dist/
 build/
 package-lock.json
+server/.env
+server/*.db
+.venv/
+__pycache__/
+.pytest_cache/
