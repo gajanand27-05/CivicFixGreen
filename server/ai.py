@@ -90,6 +90,11 @@ def data_url_to_bytes(url):
     return resp.headers.get("Content-Type", "image/jpeg").split(";")[0], resp.content
 
 
+def _models(cfg):
+    """GEMINI_MODEL may list fallbacks, e.g. "gemini-3.8-flash,gemini-3.7-flash"."""
+    return [m.strip() for m in cfg.gemini_model.split(",") if m.strip()]
+
+
 def _gemini(cfg, prompt, media_urls=(), schema=None):
     parts = [{"text": prompt}]
     for url in media_urls:
@@ -98,12 +103,19 @@ def _gemini(cfg, prompt, media_urls=(), schema=None):
     gen = {"responseMimeType": "application/json"}
     if schema:
         gen["responseSchema"] = schema
-    resp = requests.post(
-        f"https://generativelanguage.googleapis.com/v1beta/models/{cfg.gemini_model}:generateContent",
-        params={"key": cfg.gemini_api_key},
-        json={"contents": [{"parts": parts}], "generationConfig": gen},
-        timeout=60,
-    )
+    models = _models(cfg)
+    for i, model in enumerate(models):
+        resp = requests.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+            params={"key": cfg.gemini_api_key},
+            json={"contents": [{"parts": parts}], "generationConfig": gen},
+            timeout=60,
+        )
+        # unknown/retired model for this key -> try the next one
+        if resp.status_code in (400, 404) and "model" in resp.text.lower() and i < len(models) - 1:
+            print(f"[ai] model {model} unavailable ({resp.status_code}), trying {models[i + 1]}")
+            continue
+        break
     resp.raise_for_status()
     text = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
     if text.startswith("```"):

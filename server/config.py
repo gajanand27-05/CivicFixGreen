@@ -35,7 +35,7 @@ def load():
         gmail_address=e("GMAIL_ADDRESS", "").strip(),
         gmail_app_password=e("GMAIL_APP_PASSWORD", "").replace(" ", ""),
         gemini_api_key=e("GEMINI_API_KEY", "").strip(),
-        gemini_model=e("GEMINI_MODEL", "gemini-2.5-flash").strip(),
+        gemini_model=e("GEMINI_MODEL", "gemini-3.8-flash,gemini-3.7-flash,gemini-2.5-flash").strip(),
         demo_office_email=e("DEMO_OFFICE_EMAIL", "").strip(),
         send_to_real_bbmp=e("SEND_TO_REAL_BBMP", "false").lower() == "true",
         reminder_after=timedelta(minutes=float(e("REMINDER_AFTER_MINUTES", "7200"))),
