@@ -45,10 +45,6 @@ const MapPage = {
             <span class="checkmark"></span>
             AI Hotspots
           </label>
-          <hr style="border: 0; border-top: 1px solid var(--border-color, #e2e8f0); margin: 10px 0;">
-          <button id="map-sync-govt-btn" class="btn btn-secondary" style="font-size: 0.76rem; padding: 6px 10px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;">
-            <i data-lucide="radio"></i> Ingest Live Govt Data
-          </button>
         </div>
 
         <!-- Floating Action Button -->
@@ -69,14 +65,7 @@ const MapPage = {
                 <label for="map-filter-category">Category</label>
                 <select id="map-filter-category" class="form-control">
                   <option value="all">All Categories</option>
-                  <option value="pothole">Potholes</option>
-                  <option value="streetlight">Streetlights</option>
-                  <option value="water_leakage">Water Leakage</option>
-                  <option value="garbage">Garbage Overflow</option>
-                  <option value="flooding">Flooding</option>
-                  <option value="road_damage">Road Damage</option>
-                  <option value="vandalism">Vandalism</option>
-                  <option value="encroachment">Encroachment</option>
+                  ${Green.categoryOptionsHtml()}
                 </select>
               </div>
 
@@ -86,7 +75,7 @@ const MapPage = {
                   <option value="all">All Statuses</option>
                   <option value="open">Open</option>
                   <option value="in_progress">In Progress</option>
-                  <option value="resolved">Resolved</option>
+                  <option value="resolved">Closed</option>
                 </select>
               </div>
             </div>
@@ -307,7 +296,7 @@ const MapPage = {
           <div class="map-popup-card" style="color:#0f172a; font-family:sans-serif; min-width:220px;">
             ${photoUrl ? `<img src="${photoUrl}" style="width:100%; height:110px; object-fit:cover; border-radius:8px; margin-bottom:8px; display:block;" />` : ''}
             <div class="popup-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <span class="status-pill status-${issue.status}" style="font-size:10px; padding:2px 8px; font-weight:700;">${issue.status.toUpperCase()}</span>
+              <span class="status-pill status-${issue.status}" style="font-size:10px; padding:2px 8px; font-weight:700;">${Green.statusLabel(issue.status).toUpperCase()}</span>
               <span class="severity-badge severity-${issue.severity}" style="position:static; font-size:10px; padding:2px 6px;">Sev ${issue.severity}</span>
             </div>
             <h4 class="popup-title" style="margin:4px 0; font-size:13px; font-weight:700; color:#0f172a; line-height:1.3;">${issue.title}</h4>
@@ -433,7 +422,7 @@ const MapPage = {
         const hotspotContent = `
           <div style="color:#0f172a; padding:6px; font-family:sans-serif;">
             <strong style="color:#F97316;">AI predicted Hotspot Zone</strong>
-            <div>Category: ${pred.predicted_category.toUpperCase()}</div>
+            <div>Category: ${Green.label(pred.predicted_category)}</div>
             <div>Risk Score: ${pred.risk_score}%</div>
             <div>Historical Recurrence: ${pred.historical_count}</div>
           </div>
@@ -514,33 +503,9 @@ const MapPage = {
       this.renderLayers();
     });
 
-    // Ingest Live Govt Data on Map
-    const mapSyncBtn = document.getElementById('map-sync-govt-btn');
-    if (mapSyncBtn) {
-      mapSyncBtn.addEventListener('click', async () => {
-        mapSyncBtn.disabled = true;
-        const orig = mapSyncBtn.innerHTML;
-        mapSyncBtn.innerHTML = `<i data-lucide="loader-2" class="spin"></i> Syncing...`;
-        if (window.lucide) window.lucide.createIcons();
-        try {
-          if (window.GovtDataService) {
-            const res = await window.GovtDataService.syncGovtTicketsToDB(8);
-            App.showToast(`Ingested ${res.syncedCount} Live Municipal Tickets!`, 'success');
-            await this.loadMapData();
-            this.renderLayers();
-          }
-        } catch (e) {
-          console.error(e);
-        } finally {
-          mapSyncBtn.disabled = false;
-          mapSyncBtn.innerHTML = orig;
-          if (window.lucide) window.lucide.createIcons();
-        }
-      });
-    }
-
     // Auto update layers if DB changes
     window.addEventListener('db-update', async () => {
+      if (!document.getElementById('map-filter-category')) return; // map not on screen
       await this.loadMapData();
       this.renderLayers();
     });
@@ -574,6 +539,7 @@ const MapPage = {
 
     // Sync DB changes
     window.addEventListener('db-update', async () => {
+      if (!document.getElementById('map-filter-category')) return; // map not on screen
       await this.loadMapData();
       this.renderLayers();
     });

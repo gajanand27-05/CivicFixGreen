@@ -51,7 +51,7 @@ const SignupPage = {
               <div class="form-group half-width">
                 <label for="signup-city">City</label>
                 <select id="signup-city">
-                  <option value="MetroCity">MetroCity</option>
+                  <option value="Bengaluru">Bengaluru</option>
                 </select>
               </div>
 

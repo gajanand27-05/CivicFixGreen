@@ -11,10 +11,10 @@ const PublicPage = {
       <div class="public-container">
         <!-- Hero Section -->
         <div class="public-hero">
-          <h1>City Transparency Board</h1>
-          <p>Real-time civic status, operational metrics, and verified issue resolutions in MetroCity.</p>
+          <h1>Bengaluru Clean City Board</h1>
+          <p>Live waste-dump complaints, cleanups and BBMP response times across Bengaluru.</p>
           <button class="btn btn-primary mt-3" onclick="Router.navigate('#/report')">
-            <i data-lucide="plus-circle"></i> Report a New Issue
+            <i data-lucide="plus-circle"></i> Report a Garbage Dump
           </button>
         </div>
 
@@ -22,35 +22,41 @@ const PublicPage = {
         <div class="metrics-grid mt-4">
           <div class="metric-card card">
             <div class="metric-header">
-              <span class="m-title">Reported This Month</span>
+              <span class="m-title">Dumps Reported</span>
             </div>
             <div class="metric-value color-primary" id="pub-total">0</div>
           </div>
           <div class="metric-card card">
             <div class="metric-header">
-              <span class="m-title font-bold text-success">Total Resolved</span>
+              <span class="m-title font-bold text-success">Complaints Closed</span>
             </div>
             <div class="metric-value color-success" id="pub-resolved">0</div>
           </div>
           <div class="metric-card card">
             <div class="metric-header">
-              <span class="m-title">Average Fix SLA</span>
+              <span class="m-title">kg of Waste Cleared</span>
             </div>
-            <div class="metric-value" style="color:#8B5CF6;">26.4 hrs</div>
+            <div class="metric-value color-success" id="pub-kg">0</div>
+          </div>
+          <div class="metric-card card">
+            <div class="metric-header">
+              <span class="m-title">Avg Days to Close</span>
+            </div>
+            <div class="metric-value" style="color:#8B5CF6;" id="pub-days">0</div>
           </div>
         </div>
 
         <!-- Public Map -->
         <div class="public-map-card card mt-4">
-          <h3>Live Issues Map</h3>
-          <p class="text-muted small mb-3">Map pins representing active and resolved community reports.</p>
+          <h3>Live Waste Dumps Map</h3>
+          <p class="text-muted small mb-3">Red: open, amber: cleanup in progress, green: cleared.</p>
           <div id="public-google-map" style="width:100%; height:320px; border-radius:12px;"></div>
         </div>
 
         <!-- Visual Resolutions Showcase -->
         <div class="public-gallery-card card mt-4">
-          <h3>Recently Resolved Issues</h3>
-          <p class="text-muted mb-4">Compare before-and-after photo evidence of successful resolutions.</p>
+          <h3>Recently Cleaned Spots</h3>
+          <p class="text-muted mb-4">Before-and-after photos of cleanups, verified by AI.</p>
           <div class="resolutions-showcase-row" id="public-resolutions-row">
             <!-- Populated dynamically -->
           </div>
@@ -59,7 +65,7 @@ const PublicPage = {
         <!-- Transparency Reports Downloads -->
         <div class="reports-downloads-card card mt-4 mb-5">
           <h3>Published Monthly Reports</h3>
-          <p class="text-muted mb-3">Official compliance audits published by authority boards.</p>
+          <p class="text-muted mb-3">Monthly waste complaint and cleanup summaries for Bengaluru.</p>
           <div class="reports-list-grid" id="public-reports-grid">
             <!-- Populated dynamically -->
           </div>
@@ -84,6 +90,12 @@ const PublicPage = {
     document.getElementById('pub-total').innerText = total;
     document.getElementById('pub-resolved').innerText = resolved;
 
+    const closed = issues.filter(i => i.status === 'resolved');
+    const kg = closed.reduce((sum, i) => sum + (Number(i.est_weight_kg) || 0), 0);
+    const avgDays = closed.length ? closed.reduce((s, i) => s + Green.daysOpen(i), 0) / closed.length : 0;
+    document.getElementById('pub-kg').innerText = Math.round(kg).toLocaleString('en-IN');
+    document.getElementById('pub-days').innerText = avgDays.toFixed(1);
+
     // Load reports
     const reportsGrid = document.getElementById('public-reports-grid');
     const publicReports = reports.filter(r => r.is_public);
@@ -97,7 +109,7 @@ const PublicPage = {
             <div class="pdf-icon-placeholder"><i data-lucide="file-text" style="color:#EF4444;"></i></div>
             <div>
               <strong>Report for ${r.month === 5 ? 'May 2026' : 'June 2026'}</strong>
-              <div class="text-muted small">${r.total_reported} issues / ${r.total_resolved} resolved</div>
+              <div class="text-muted small">${r.total_reported} complaints / ${r.total_resolved} closed</div>
             </div>
           </div>
           <button class="btn btn-outline btn-xs" onclick="App.showToast('Downloaded PDF', 'Mock PDF download trigger.', 'success')">
@@ -112,18 +124,18 @@ const PublicPage = {
     const galleryRow = document.getElementById('public-resolutions-row');
 
     if (resolvedIssues.length === 0) {
-      galleryRow.innerHTML = '<p class="text-muted">No resolved comparisons available yet.</p>';
+      galleryRow.innerHTML = '<p class="text-muted">No cleanups verified yet.</p>';
     } else {
       galleryRow.innerHTML = resolvedIssues.slice(0, 3).map(i => `
         <div class="resolution-showcase-card card">
           <div class="side-by-side-gallery">
-            <img src="${i.before_photo_url}" class="col-photo" title="Before fix">
-            <img src="${i.after_photo_url}" class="col-photo" title="After fix">
+            <img src="${i.before_photo_url}" class="col-photo" title="Before cleanup">
+            <img src="${i.after_photo_url}" class="col-photo" title="After cleanup">
           </div>
           <div class="showcase-content">
             <h4>${i.title.substring(0, 25)}...</h4>
-            <span class="category-tag mt-2">${i.category.toUpperCase()}</span>
-            <p class="text-muted small mt-1">Resolved: ${new Date(i.resolved_at).toLocaleDateString()}</p>
+            <span class="category-tag mt-2">${Green.label(i.category)}</span>
+            <p class="text-muted small mt-1">Cleaned: ${new Date(i.resolved_at).toLocaleDateString()}</p>
           </div>
         </div>
       `).join('');
@@ -168,7 +180,7 @@ const PublicPage = {
           const popupContent = `
             <div class="map-popup-card" style="color:#0f172a; font-family:sans-serif;">
               <h4 style="margin:2px 0; font-size:12px; font-weight:700;">${issue.title.substring(0, 30)}...</h4>
-              <span class="popup-status status-${issue.status}" style="font-size:9px; padding:1px 4px;">${issue.status.toUpperCase()}</span>
+              <span class="popup-status status-${issue.status}" style="font-size:9px; padding:1px 4px;">${Green.statusLabel(issue.status)}</span>
               <button class="btn btn-primary btn-xs mt-2" style="width:100%; display:block;" onclick="PublicPage.viewIssueDetails('${issue.id}')">View Details</button>
             </div>
           `;
@@ -223,7 +235,7 @@ const PublicPage = {
           const popupContent = `
             <div class="map-popup-card" style="color:#0f172a; font-family:sans-serif;">
               <h4 style="margin:2px 0; font-size:12px; font-weight:700;">${issue.title.substring(0, 30)}...</h4>
-              <span class="popup-status status-${issue.status}" style="font-size:9px; padding:1px 4px;">${issue.status.toUpperCase()}</span>
+              <span class="popup-status status-${issue.status}" style="font-size:9px; padding:1px 4px;">${Green.statusLabel(issue.status)}</span>
               <button class="btn btn-primary btn-xs mt-2" style="width:100%; display:block;" onclick="PublicPage.viewIssueDetails('${issue.id}')">View Details</button>
             </div>
           `;
@@ -273,9 +285,9 @@ const PublicIssuePage = {
       card.innerHTML = `
         <div class="error-panel card">
           <i data-lucide="alert-circle" style="width:48px;height:48px;color:#EF4444;"></i>
-          <h2>Issue Not Found</h2>
-          <p>The shared issue ticket does not exist or has been removed.</p>
-          <a href="#/public" class="btn btn-primary mt-3">Back to Transparency Board</a>
+          <h2>Complaint Not Found</h2>
+          <p>The shared complaint does not exist or has been removed.</p>
+          <a href="#/public" class="btn btn-primary mt-3">Back to City Board</a>
         </div>
       `;
       if (window.lucide) window.lucide.createIcons();
@@ -299,7 +311,7 @@ const PublicIssuePage = {
             <img src="${issue.before_photo_url}" class="side-img">
           </div>
           <div class="photo-side">
-            <span class="side-badge success">RESOLVED FIX</span>
+            <span class="side-badge success">AFTER CLEANUP</span>
             <img src="${issue.after_photo_url}" class="side-img">
           </div>
         </div>
@@ -310,13 +322,13 @@ const PublicIssuePage = {
       <div class="issue-public-card card">
         <div class="pane-header mb-3">
           <button class="btn btn-outline btn-xs" onclick="Router.navigate('#/public')"><i data-lucide="arrow-left"></i> Back</button>
-          <span class="status-pill status-${issue.status}">${issue.status.toUpperCase()}</span>
+          <span class="status-pill status-${issue.status}">${Green.statusLabel(issue.status)}</span>
         </div>
 
         ${photosHtml}
 
         <div class="mt-4">
-          <span class="category-tag">${issue.category.toUpperCase().replace('_', ' ')}</span>
+          <span class="category-tag">${Green.label(issue.category)}</span>
           <span class="severity-badge severity-${issue.severity} ml-2">Severity ${issue.severity}</span>
           
           <h1 class="mt-3" style="font-size:24px; font-weight:700; line-height:1.2;">${issue.title}</h1>
@@ -334,13 +346,13 @@ const PublicIssuePage = {
 
         <!-- Location mini-map -->
         <div class="mt-4">
-          <h3>Issue Coordinates</h3>
+          <h3>Dump Location</h3>
           <div id="public-issue-google-map" class="details-mini-map mt-2" style="height:200px; border-radius:12px;"></div>
         </div>
 
         <!-- Timeline -->
         <div class="mt-4">
-          <h3>Resolution Progress</h3>
+          <h3>Complaint Progress</h3>
           <div class="text-timeline-logs mt-3">
             ${issueTimeline.map(log => `
               <div class="log-entry">
@@ -356,7 +368,7 @@ const PublicIssuePage = {
         </div>
 
         <div class="mt-4 border-top pt-4 text-center">
-          <p class="text-muted">Want to upvote or co-report this issue? <a href="#/login">Login to CivicFix</a></p>
+          <p class="text-muted">Want to upvote or co-report this dump? <a href="#/login">Login to CivicFix Green</a></p>
           <button class="btn btn-primary mt-3" onclick="HomePage.shareIssue('${issue.id}')"><i data-lucide="share-2"></i> Share Report</button>
         </div>
       </div>
@@ -425,7 +437,7 @@ const PublicIssuePage = {
 
   updateOpenGraphTags(issue) {
     // Dynamic Meta Head Injector
-    document.title = `${issue.title} | CivicFix Transparency`;
+    document.title = `${issue.title} | CivicFix Green City Board`;
     
     // Set Open Graph tags
     this.setMetaTag('og:title', issue.title);

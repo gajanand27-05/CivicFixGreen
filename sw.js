@@ -1,4 +1,4 @@
-const CACHE_NAME = 'civicfix-cache-v5';
+const CACHE_NAME = 'civicfix-cache-v6';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const ASSETS_TO_CACHE = [
   './offline.html',
   './assets/icon.svg',
   './js/config.js',
+  './js/categories.js',
   './js/app.js',
   './js/db.js',
   './js/auth.js',
@@ -48,6 +49,8 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+  const url = new URL(e.request.url);
+  if (e.request.method !== 'GET' || url.pathname.startsWith('/api/')) return; // API is always live
   // Network first for all requests; fall back to cache when offline
   e.respondWith(
     fetch(e.request)

@@ -1,114 +1,58 @@
 // js/db.js
-// CivicFix IndexedDB Wrapper and Mock Seeder
+// CivicFix data layer: same API as before, backed by the shared server store (server/store.py)
 
-const DB_NAME = 'CivicFixDB';
-const DB_VERSION = 1;
+const SEED_VERSION = 'v8_green';
+
+async function dbApi(method, path, body) {
+  const res = await fetch(`${CONFIG.API_BASE}/api/db/${path}`, {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : {},
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) throw new Error(`DB ${method} ${path} failed (${res.status})`);
+  return res.json();
+}
 
 const DB = {
-  db: null,
-
-  // Initialize IndexedDB
-  init() {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-      request.onerror = (e) => {
-        console.error('Database failed to open', e);
-        reject(e);
-      };
-
-      request.onsuccess = (e) => {
-        this.db = e.target.result;
-        resolve(this);
-      };
-
-      request.onupgradeneeded = (e) => {
-        const db = e.target.result;
-
-        // Create Object Stores
-        db.createObjectStore('users', { keyPath: 'id' });
-        db.createObjectStore('issues', { keyPath: 'id' });
-        db.createObjectStore('verifications', { keyPath: 'id' });
-        db.createObjectStore('issue_timeline', { keyPath: 'id' });
-        db.createObjectStore('badges', { keyPath: 'id' });
-        db.createObjectStore('hotspot_predictions', { keyPath: 'id' });
-        db.createObjectStore('monthly_reports', { keyPath: 'id' });
-      };
-    });
+  async init() {
+    await dbApi('GET', 'meta'); // fails fast if the server is not running
+    return this;
   },
 
-  // Generic Operations
   getAll(storeName) {
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction([storeName], 'readonly');
-      const store = transaction.objectStore(storeName);
-      const request = store.getAll();
-
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+    return dbApi('GET', storeName);
   },
 
-  get(storeName, key) {
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction([storeName], 'readonly');
-      const store = transaction.objectStore(storeName);
-      const request = store.get(key);
-
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
+  async get(storeName, key) {
+    const doc = await dbApi('GET', `${storeName}/${encodeURIComponent(key)}`);
+    return doc === null ? undefined : doc;
   },
 
   put(storeName, value) {
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction([storeName], 'readwrite');
-      const store = transaction.objectStore(storeName);
-      const request = store.put(value);
-
-      request.onsuccess = () => resolve(value);
-      request.onerror = () => reject(request.error);
-    });
+    return dbApi('PUT', `${storeName}/${encodeURIComponent(value.id)}`, value);
   },
 
   delete(storeName, key) {
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction([storeName], 'readwrite');
-      const store = transaction.objectStore(storeName);
-      const request = store.delete(key);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    return dbApi('DELETE', `${storeName}/${encodeURIComponent(key)}`);
   },
 
   clear(storeName) {
-    return new Promise((resolve, reject) => {
-      const transaction = this.db.transaction([storeName], 'readwrite');
-      const store = transaction.objectStore(storeName);
-      const request = store.clear();
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+    return dbApi('POST', `${storeName}/clear`);
   },
 
-  // Seed default data if database is empty or outdated
+  // Seed shared demo data once per server database
   async seedIfNeeded() {
-    const CURRENT_SEED_VERSION = 'v7_realistic_demo';
-    const users = await this.getAll('users');
-    const existingVersion = localStorage.getItem('civicfix_seed_version');
-
-    if (users.length > 0 && existingVersion === CURRENT_SEED_VERSION) {
-      console.log('Database already seeded with version:', CURRENT_SEED_VERSION);
+    const meta = await this.get('meta', 'seed');
+    if (meta && meta.version === SEED_VERSION) {
+      console.log('Server DB already seeded:', SEED_VERSION);
       return;
     }
 
-    console.log('Seeding database with realistic demo photography...');
-    for (const store of ['users', 'issues', 'verifications', 'issue_timeline', 'badges', 'hotspot_predictions', 'monthly_reports']) {
-      try { await this.clear(store); } catch(e) {}
+    console.log('Seeding server DB...');
+    for (const store of ['users', 'issues', 'verifications', 'issue_timeline', 'badges', 'hotspot_predictions', 'monthly_reports', 'notifications']) {
+      await this.clear(store);
     }
-    
+
     // Seed Users
     const seedUsers = [
       {
@@ -117,7 +61,7 @@ const DB = {
         email: 'admin@civicfix.gov',
         password_hash: 'admin123',
         role: 'admin',
-        city: 'MetroCity',
+        city: 'Bengaluru',
         ward: 'Ward 4',
         points: 0,
         google_oauth_id: null,
@@ -127,13 +71,13 @@ const DB = {
       },
       {
         id: 'officer_1',
-        name: 'Officer Rajesh Kumar',
+        name: 'Officer Ramesh Kumar (BBMP East)',
         email: 'officer@civicfix.gov',
         password_hash: 'officer123',
         role: 'authority',
-        city: 'MetroCity',
+        city: 'Bengaluru',
         ward: 'Ward 4',
-        department: 'roads',
+        department: 'swm',
         points: 0,
         google_oauth_id: null,
         avatar_url: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=150&h=150&q=80',
@@ -142,13 +86,13 @@ const DB = {
       },
       {
         id: 'officer_2',
-        name: 'Officer Priya Menon',
+        name: 'Officer Priya Menon (BBMP West)',
         email: 'priya.menon@civicfix.gov',
         password_hash: 'officer123',
         role: 'authority',
-        city: 'MetroCity',
+        city: 'Bengaluru',
         ward: 'Ward 5',
-        department: 'sanitation',
+        department: 'swm',
         points: 0,
         google_oauth_id: null,
         avatar_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&h=150&q=80',
@@ -161,7 +105,7 @@ const DB = {
         email: 'citizen@civicfix.gov',
         password_hash: 'citizen123',
         role: 'citizen',
-        city: 'MetroCity',
+        city: 'Bengaluru',
         ward: 'Ward 4',
         points: 390,
         google_oauth_id: null,
@@ -175,7 +119,7 @@ const DB = {
         email: 'sneha@gmail.com',
         password_hash: 'citizen123',
         role: 'citizen',
-        city: 'MetroCity',
+        city: 'Bengaluru',
         ward: 'Ward 4',
         points: 620,
         google_oauth_id: null,
@@ -189,7 +133,7 @@ const DB = {
         email: 'rohan@gmail.com',
         password_hash: 'citizen123',
         role: 'citizen',
-        city: 'MetroCity',
+        city: 'Bengaluru',
         ward: 'Ward 5',
         points: 215,
         google_oauth_id: null,
@@ -203,7 +147,7 @@ const DB = {
         email: 'kabir@gmail.com',
         password_hash: 'citizen123',
         role: 'citizen',
-        city: 'MetroCity',
+        city: 'Bengaluru',
         ward: 'Ward 4',
         points: 485,
         google_oauth_id: null,
@@ -217,7 +161,7 @@ const DB = {
         email: 'ananya@gmail.com',
         password_hash: 'citizen123',
         role: 'citizen',
-        city: 'MetroCity',
+        city: 'Bengaluru',
         ward: 'Ward 6',
         points: 150,
         google_oauth_id: null,
@@ -231,309 +175,325 @@ const DB = {
       await this.put('users', u);
     }
 
-    // High quality, realistic Unsplash photographs for real civic demonstration
+    // Unsplash photos (each URL checked to return HTTP 200 and to show waste / clean bins)
+    const img = (id) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=800&q=80`;
     const mockImages = {
-      pothole: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
-      pothole_fixed: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=800&q=80',
-      streetlight: 'https://images.unsplash.com/photo-1509114397022-ed747cca3f65?auto=format&fit=crop&w=800&q=80',
-      streetlight_fixed: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=800&q=80',
-      water_leakage: 'https://images.unsplash.com/photo-1584982751601-97dcc096659c?auto=format&fit=crop&w=800&q=80',
-      water_leakage_fixed: 'https://images.unsplash.com/photo-1581244277943-fe4a9c777189?auto=format&fit=crop&w=800&q=80',
-      garbage: 'https://images.unsplash.com/photo-1605600659908-0ef719419d41?auto=format&fit=crop&w=800&q=80',
-      garbage_fixed: 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=800&q=80',
-      flooding: 'https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=800&q=80',
-      flooding_fixed: 'https://images.unsplash.com/photo-1477959858617-67f30bc75b82?auto=format&fit=crop&w=800&q=80',
-      road_damage: 'https://images.unsplash.com/photo-1590496793929-36417d3117de?auto=format&fit=crop&w=800&q=80',
-      road_damage_fixed: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80',
-      vandalism: 'https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?auto=format&fit=crop&w=800&q=80',
-      vandalism_fixed: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80',
-      encroachment: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=800&q=80',
-      encroachment_fixed: 'https://images.unsplash.com/photo-1496868834840-5f4c98840aaa?auto=format&fit=crop&w=800&q=80',
-      other: 'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=800&q=80',
-      other_fixed: 'https://images.unsplash.com/photo-1508873696983-2df5293cb325?auto=format&fit=crop&w=800&q=80'
+      overflowing_bin: img('photo-1605600659908-0ef719419d41'), // bin overflowing onto pavement
+      plastic_litter: img('photo-1530587191325-3db32d826c18'),  // plastic bottles littered on the ground
+      plastic_pile: img('photo-1595278069441-2cf29f8005a4'),    // heap of dumped plastic bottles
+      cardboard_dump: img('photo-1567393528677-d6adae7d4a0a'),  // dumped cardboard / commercial waste
+      cardboard_bales: img('photo-1528323273322-d81458248d40'), // cardboard waste piled by a wall
+      burning: img('photo-1572204097183-e1ab140342ed'),         // open fire at night
+      construction: img('photo-1504307651254-35680f356dfd'),    // construction site with debris
+      cleaned_bins: img('photo-1532996122724-e3c354a0b15b'),    // clean pavement with segregation bins
+      cleaned_bins_2: img('photo-1611284446314-60a58ac0deb9')   // clean segregation bins
     };
 
-    // Seed Issues
+    const daysAgo = (d) => new Date(Date.now() - d * 24 * 60 * 60 * 1000).toISOString();
+    const seedComplaint = (ticketId, days) => ({
+      ticket_id: ticketId, office_id: 'east', office_name: 'BBMP East Zone Office',
+      office_email: 'seed-only@example.invalid', officer_user_id: 'officer_1', complainer_email: '',
+      sent_at: daysAgo(days), message_id: '', email_status: 'sent',
+      last_activity_at: daysAgo(days),
+      reminder_count: 3, last_reminder_at: daysAgo(1), replies: 0
+    });
+
+    // Seed Issues: 10 waste complaints in Indiranagar / HAL / Domlur
     const seedIssues = [
       {
         id: 'issue_001',
-        title: 'Dangerous Pothole on 100ft Road Main Intersection',
-        description: 'Large jagged pothole right in the middle of Indiranagar 100ft road intersection. Two-wheelers frequently slip here, especially when it rains. Needs urgent patching.',
-        category: 'pothole',
+        title: 'Plastic Garbage Dumped on 100ft Road Footpath',
+        description: 'A large heap of plastic bottles and packaging has been dumped on the footpath near the 100ft Road junction. It has been growing for days and now blocks half the walkway.',
+        category: 'illegal_dumping',
         severity: 4,
         status: 'open',
-        media_urls: [mockImages.pothole],
-        lat: 12.9716,
-        lng: 77.6412,
+        media_urls: [mockImages.plastic_pile],
+        lat: 12.9745,
+        lng: 77.6405,
         address: '100 Feet Rd, Indiranagar, Bengaluru, Karnataka 560038',
-        ward: 'Ward 4',
+        ward: 'Ward 80 (Indiranagar)',
         reporter_id: 'citizen_1',
         upvote_count: 27,
         report_count: 3,
         assigned_to: null,
-        department: 'roads',
-        ai_category: 'pothole',
+        department: 'swm',
+        ai_category: 'illegal_dumping',
         ai_severity: 4,
         ai_confidence: 0.94,
-        created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        updated_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        created_at: daysAgo(6),
+        updated_at: daysAgo(6),
         resolved_at: null,
-        before_photo_url: mockImages.pothole,
+        before_photo_url: mockImages.plastic_pile,
         after_photo_url: null,
         ai_resolution_validated: false,
-        ai_resolution_confidence: null
+        ai_resolution_confidence: null,
+        est_weight_kg: 120,
+        complaint: seedComplaint('CFG-S001', 6)
       },
       {
         id: 'issue_002',
-        title: 'Entire Line of Broken Streetlights on 5th Main',
-        description: 'Five consecutive streetlights are broken on 5th Main, making the entire stretch pitch dark. Citizens feel unsafe walking home from the metro after 8 PM.',
-        category: 'streetlight',
-        severity: 3,
-        status: 'in_progress',
-        media_urls: [mockImages.streetlight],
-        lat: 12.9754,
-        lng: 77.6445,
-        address: '5th Main Rd, HAL 2nd Stage, Indiranagar, Bengaluru, Karnataka 560008',
-        ward: 'Ward 4',
-        reporter_id: 'citizen_2',
-        upvote_count: 15,
-        report_count: 1,
-        assigned_to: 'officer_1',
-        department: 'electricity',
-        ai_category: 'streetlight',
-        ai_severity: 3,
-        ai_confidence: 0.88,
-        created_at: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-        updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        resolved_at: null,
-        before_photo_url: mockImages.streetlight,
-        after_photo_url: null,
-        ai_resolution_validated: false,
-        ai_resolution_confidence: null
-      },
-      {
-        id: 'issue_003',
-        title: 'Major Drinking Water Pipe Burst',
-        description: 'Drinking water is gushing out from the underground pipe line near Indiranagar bus stop. Hundreds of liters of clean water are being wasted hourly, flooding the sidewalk.',
-        category: 'water_leakage',
-        severity: 4,
-        status: 'resolved',
-        media_urls: [mockImages.water_leakage],
-        lat: 12.9705,
-        lng: 77.6385,
-        address: 'Indiranagar Bus Stop, Bengaluru, Karnataka 560038',
-        ward: 'Ward 4',
-        reporter_id: 'citizen_3',
-        upvote_count: 32,
-        report_count: 1,
-        assigned_to: 'officer_1',
-        department: 'water',
-        ai_category: 'water_leakage',
-        ai_severity: 4,
-        ai_confidence: 0.96,
-        created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-        updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-        resolved_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-        before_photo_url: mockImages.water_leakage,
-        after_photo_url: mockImages.water_leakage_fixed,
-        ai_resolution_validated: true,
-        ai_resolution_confidence: 0.95
-      },
-      {
-        id: 'issue_004',
-        title: 'Overflowing Commercial Waste Dump',
-        description: 'Massive dump of commercial and plastic garbage piled up on the pavement. The smell is unbearable, and stray animals are spreading it onto the road, blocking pedestrian traffic.',
-        category: 'garbage',
+        title: 'Overflowing Community Bin on 12th Main',
+        description: 'The community bin on 12th Main has not been cleared for over a week. Garbage is spilling onto the pavement and stray dogs are scattering it onto the road.',
+        category: 'overflowing_bin',
         severity: 3,
         status: 'open',
-        media_urls: [mockImages.garbage],
+        media_urls: [mockImages.overflowing_bin],
         lat: 12.9782,
         lng: 77.6408,
         address: '12th Main Rd, Indiranagar, Bengaluru, Karnataka 560008',
-        ward: 'Ward 5',
+        ward: 'Ward 80 (Indiranagar)',
         reporter_id: 'citizen_2',
         upvote_count: 42,
         report_count: 4,
         assigned_to: null,
-        department: 'sanitation',
-        ai_category: 'garbage',
+        department: 'swm',
+        ai_category: 'overflowing_bin',
         ai_severity: 3,
         ai_confidence: 0.91,
-        created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-        updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+        created_at: daysAgo(6.5),
+        updated_at: daysAgo(6),
         resolved_at: null,
-        before_photo_url: mockImages.garbage,
+        before_photo_url: mockImages.overflowing_bin,
         after_photo_url: null,
         ai_resolution_validated: false,
-        ai_resolution_confidence: null
+        ai_resolution_confidence: null,
+        est_weight_kg: 60,
+        complaint: seedComplaint('CFG-S002', 6)
       },
       {
-        id: 'issue_005',
-        title: 'Waterlogging & Severe Flooding at Metro Pedestrian Walk',
-        description: 'Heavy water stagnation under the metro pillar walkway. The water is knee-deep and smells like sewage. Pedestrians cannot cross the road without wading through it.',
-        category: 'flooding',
+        id: 'issue_003',
+        title: 'Garbage Being Burnt in Open Plot on Double Road',
+        description: 'Mixed garbage is being set on fire every evening in the empty plot off Double Road. Thick toxic smoke is entering nearby homes and the school next door.',
+        category: 'waste_burning',
         severity: 5,
-        status: 'in_progress',
-        media_urls: [mockImages.flooding],
-        lat: 12.9785,
-        lng: 77.6391,
-        address: 'Indiranagar Metro Station Gate A, Bengaluru, Karnataka 560038',
-        ward: 'Ward 4',
+        status: 'open',
+        media_urls: [mockImages.burning],
+        lat: 12.9705,
+        lng: 77.6435,
+        address: 'Double Rd, HAL 2nd Stage, Indiranagar, Bengaluru, Karnataka 560008',
+        ward: 'Ward 88 (HAL 2nd Stage)',
         reporter_id: 'citizen_4',
         upvote_count: 56,
         report_count: 2,
-        assigned_to: 'officer_1',
-        department: 'municipality',
-        ai_category: 'flooding',
+        assigned_to: null,
+        department: 'swm',
+        ai_category: 'waste_burning',
         ai_severity: 5,
         ai_confidence: 0.97,
-        created_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-        updated_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+        created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+        updated_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
         resolved_at: null,
-        before_photo_url: mockImages.flooding,
+        before_photo_url: mockImages.burning,
         after_photo_url: null,
         ai_resolution_validated: false,
-        ai_resolution_confidence: null
+        ai_resolution_confidence: null,
+        est_weight_kg: 35
       },
       {
-        id: 'issue_006',
-        title: 'Broken and Missing Footpath Slab',
-        description: 'Concrete slabs on the footpath are broken or completely missing, exposing a 3-foot drop into the open storm drain. Highly hazardous for visually impaired and elderly pedestrians.',
-        category: 'road_damage',
-        severity: 4,
-        status: 'open',
-        media_urls: [mockImages.road_damage],
-        lat: 12.9729,
-        lng: 77.6431,
-        address: '80 Feet Rd, Indiranagar, Bengaluru, Karnataka 560008',
-        ward: 'Ward 4',
-        reporter_id: 'citizen_4',
-        upvote_count: 18,
-        report_count: 1,
-        assigned_to: null,
-        department: 'roads',
-        ai_category: 'road_damage',
-        ai_severity: 4,
-        ai_confidence: 0.89,
-        created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-        updated_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-        resolved_at: null,
-        before_photo_url: mockImages.road_damage,
-        after_photo_url: null,
-        ai_resolution_validated: false,
-        ai_resolution_confidence: null
-      },
-      {
-        id: 'issue_007',
-        title: 'Graffiti Spraying on Public Park Heritage Arch',
-        description: 'Vandals have sprayed graffiti all over the historical entrance arch of Defense Colony Children Park. Damaging the look of our community green space.',
-        category: 'vandalism',
+        id: 'issue_004',
+        title: 'Plastic Bottles Littered Along HAL 3rd Stage Lane',
+        description: 'Plastic bottles and wrappers are littered all along the lane behind the HAL 3rd Stage market. They are washing into the storm drain whenever it rains.',
+        category: 'plastic_litter',
         severity: 2,
-        status: 'resolved',
-        media_urls: [mockImages.vandalism],
-        lat: 12.9811,
-        lng: 77.6419,
-        address: 'Defense Colony Park, Indiranagar, Bengaluru, Karnataka 560038',
-        ward: 'Ward 4',
-        reporter_id: 'citizen_5',
-        upvote_count: 9,
-        report_count: 1,
-        assigned_to: 'officer_2',
-        department: 'municipality',
-        ai_category: 'vandalism',
-        ai_severity: 2,
-        ai_confidence: 0.92,
-        created_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-        updated_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-        resolved_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-        before_photo_url: mockImages.vandalism,
-        after_photo_url: mockImages.vandalism_fixed,
-        ai_resolution_validated: true,
-        ai_resolution_confidence: 0.89
-      },
-      {
-        id: 'issue_008',
-        title: 'Sidewalk Encroachment by Illegal Food Stall',
-        description: 'A commercial fast food cart has set up semi-permanent dining tables, cylinders, and stoves directly on the busy pedestrian walkway. Forcing people to walk on the active traffic lane.',
-        category: 'encroachment',
-        severity: 3,
         status: 'open',
-        media_urls: [mockImages.encroachment],
-        lat: 12.9691,
-        lng: 77.6455,
-        address: 'Double Rd, HAL 2nd Stage, Indiranagar, Bengaluru, Karnataka 560008',
-        ward: 'Ward 4',
-        reporter_id: 'citizen_1',
+        media_urls: [mockImages.plastic_litter],
+        lat: 12.9690,
+        lng: 77.6475,
+        address: 'HAL 3rd Stage, Indiranagar, Bengaluru, Karnataka 560075',
+        ward: 'Ward 88 (HAL 2nd Stage)',
+        reporter_id: 'citizen_5',
         upvote_count: 14,
         report_count: 1,
         assigned_to: null,
-        department: 'municipality',
-        ai_category: 'encroachment',
-        ai_severity: 3,
-        ai_confidence: 0.85,
-        created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        updated_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        department: 'swm',
+        ai_category: 'plastic_litter',
+        ai_severity: 2,
+        ai_confidence: 0.86,
+        created_at: daysAgo(1),
+        updated_at: daysAgo(1),
         resolved_at: null,
-        before_photo_url: mockImages.encroachment,
+        before_photo_url: mockImages.plastic_litter,
         after_photo_url: null,
         ai_resolution_validated: false,
-        ai_resolution_confidence: null
+        ai_resolution_confidence: null,
+        est_weight_kg: 15
+      },
+      {
+        id: 'issue_005',
+        title: 'Commercial Cardboard Waste Dumped Behind Shops',
+        description: 'Shops on CMH Road are dumping cardboard boxes and packing waste behind the building every night instead of handing it to the BBMP collection vehicle.',
+        category: 'illegal_dumping',
+        severity: 3,
+        status: 'in_progress',
+        media_urls: [mockImages.cardboard_bales],
+        lat: 12.9729,
+        lng: 77.6431,
+        address: 'CMH Rd, Indiranagar, Bengaluru, Karnataka 560038',
+        ward: 'Ward 80 (Indiranagar)',
+        reporter_id: 'citizen_3',
+        upvote_count: 18,
+        report_count: 1,
+        assigned_to: 'officer_1',
+        department: 'swm',
+        ai_category: 'illegal_dumping',
+        ai_severity: 3,
+        ai_confidence: 0.89,
+        created_at: daysAgo(3),
+        updated_at: daysAgo(2),
+        resolved_at: null,
+        before_photo_url: mockImages.cardboard_bales,
+        after_photo_url: null,
+        ai_resolution_validated: false,
+        ai_resolution_confidence: null,
+        est_weight_kg: 90,
+        complaint: seedComplaint('CFG-S003', 3)
+      },
+      {
+        id: 'issue_006',
+        title: 'Construction Debris Dumped on Domlur Service Road',
+        description: 'Truckloads of broken concrete, bricks and rebar have been dumped on the Domlur service road, narrowing it to a single lane. Nobody has claimed it.',
+        category: 'construction_debris',
+        severity: 4,
+        status: 'in_progress',
+        media_urls: [mockImages.construction],
+        lat: 12.9688,
+        lng: 77.6385,
+        address: 'Domlur Service Rd, Domlur, Bengaluru, Karnataka 560071',
+        ward: 'Ward 112 (Domlur)',
+        reporter_id: 'citizen_1',
+        upvote_count: 21,
+        report_count: 2,
+        assigned_to: 'officer_1',
+        department: 'engineering',
+        ai_category: 'construction_debris',
+        ai_severity: 4,
+        ai_confidence: 0.9,
+        created_at: daysAgo(3),
+        updated_at: daysAgo(2),
+        resolved_at: null,
+        before_photo_url: mockImages.construction,
+        after_photo_url: null,
+        ai_resolution_validated: false,
+        ai_resolution_confidence: null,
+        est_weight_kg: 450,
+        complaint: seedComplaint('CFG-S004', 2.5)
+      },
+      {
+        id: 'issue_007',
+        title: 'Garbage Bin Overflowing Near Metro Feeder Stop',
+        description: 'The bin next to the metro feeder bus stop is full and garbage is piling up around it. Commuters have to step over the waste to board the bus.',
+        category: 'overflowing_bin',
+        severity: 3,
+        status: 'in_progress',
+        media_urls: [mockImages.overflowing_bin],
+        lat: 12.9765,
+        lng: 77.6455,
+        address: '80 Feet Rd, HAL 2nd Stage, Indiranagar, Bengaluru, Karnataka 560008',
+        ward: 'Ward 88 (HAL 2nd Stage)',
+        reporter_id: 'citizen_2',
+        upvote_count: 15,
+        report_count: 1,
+        assigned_to: 'officer_1',
+        department: 'swm',
+        ai_category: 'overflowing_bin',
+        ai_severity: 3,
+        ai_confidence: 0.88,
+        created_at: daysAgo(2),
+        updated_at: daysAgo(1),
+        resolved_at: null,
+        before_photo_url: mockImages.overflowing_bin,
+        after_photo_url: null,
+        ai_resolution_validated: false,
+        ai_resolution_confidence: null,
+        est_weight_kg: 40,
+        complaint: seedComplaint('CFG-S005', 2)
+      },
+      {
+        id: 'issue_008',
+        title: 'Plastic Waste Heap Near Indiranagar Bus Stop',
+        description: 'A heap of plastic bottles and mixed waste had piled up beside the Indiranagar bus stop, attracting rats and blocking the shelter.',
+        category: 'illegal_dumping',
+        severity: 4,
+        status: 'resolved',
+        media_urls: [mockImages.plastic_pile],
+        lat: 12.9712,
+        lng: 77.6388,
+        address: 'Indiranagar Bus Stop, Bengaluru, Karnataka 560038',
+        ward: 'Ward 80 (Indiranagar)',
+        reporter_id: 'citizen_3',
+        upvote_count: 32,
+        report_count: 1,
+        assigned_to: 'officer_1',
+        department: 'swm',
+        ai_category: 'illegal_dumping',
+        ai_severity: 4,
+        ai_confidence: 0.96,
+        created_at: daysAgo(10),
+        updated_at: daysAgo(1),
+        resolved_at: daysAgo(1),
+        before_photo_url: mockImages.plastic_pile,
+        after_photo_url: mockImages.cleaned_bins,
+        ai_resolution_validated: true,
+        ai_resolution_confidence: 0.93,
+        est_weight_kg: 180
       },
       {
         id: 'issue_009',
-        title: 'Fallen Electric Cable Hanging Above Pavement',
-        description: 'High voltage electrical cable has snapped from the utility pole and is hanging just 5 feet above the public pathway. Sparks seen occasionally. Very high risk of electrocution!',
-        category: 'streetlight',
-        severity: 5,
-        status: 'open',
-        media_urls: [mockImages.streetlight],
-        lat: 12.9739,
-        lng: 77.6362,
-        address: '11th Cross Rd, Indiranagar, Bengaluru, Karnataka 560038',
-        ward: 'Ward 4',
-        reporter_id: 'citizen_2',
-        upvote_count: 61,
-        report_count: 5,
-        assigned_to: null,
-        department: 'electricity',
-        ai_category: 'streetlight',
-        ai_severity: 5,
-        ai_confidence: 0.99,
-        created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-        updated_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-        resolved_at: null,
-        before_photo_url: mockImages.streetlight,
-        after_photo_url: null,
-        ai_resolution_validated: false,
-        ai_resolution_confidence: null
+        title: 'Plastic Litter Around Defence Colony Park Gate',
+        description: 'Plastic bottles and snack wrappers were littered all around the Defence Colony park entrance after the weekend market.',
+        category: 'plastic_litter',
+        severity: 2,
+        status: 'resolved',
+        media_urls: [mockImages.plastic_litter],
+        lat: 12.9811,
+        lng: 77.6419,
+        address: 'Defence Colony Park, Indiranagar, Bengaluru, Karnataka 560038',
+        ward: 'Ward 80 (Indiranagar)',
+        reporter_id: 'citizen_5',
+        upvote_count: 9,
+        report_count: 1,
+        assigned_to: 'officer_1',
+        department: 'swm',
+        ai_category: 'plastic_litter',
+        ai_severity: 2,
+        ai_confidence: 0.92,
+        created_at: daysAgo(14),
+        updated_at: daysAgo(8),
+        resolved_at: daysAgo(8),
+        before_photo_url: mockImages.plastic_litter,
+        after_photo_url: mockImages.cleaned_bins_2,
+        ai_resolution_validated: true,
+        ai_resolution_confidence: 0.88,
+        est_weight_kg: 45
       },
       {
         id: 'issue_010',
-        title: 'Broken Public Square Benches',
-        description: 'Vandals have broken the seating panels of three concrete benches in our community plaza. Elderly citizens have no place to sit during morning/evening walks.',
-        category: 'vandalism',
-        severity: 1,
+        title: 'Black Spot of Dumped Cardboard Under Domlur Flyover',
+        description: 'Cardboard and packaging waste had been dumped under the Domlur flyover for weeks, turning the spot into a garbage black spot.',
+        category: 'illegal_dumping',
+        severity: 3,
         status: 'resolved',
-        media_urls: [mockImages.vandalism],
-        lat: 12.9765,
-        lng: 77.6495,
-        address: 'HAL 3rd Stage, Indiranagar, Bengaluru, Karnataka 560075',
-        ward: 'Ward 5',
-        reporter_id: 'citizen_3',
-        upvote_count: 6,
-        report_count: 1,
-        assigned_to: 'officer_2',
-        department: 'municipality',
-        ai_category: 'vandalism',
-        ai_severity: 1,
-        ai_confidence: 0.81,
-        created_at: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
-        updated_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-        resolved_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-        before_photo_url: mockImages.vandalism,
-        after_photo_url: mockImages.vandalism_fixed,
+        media_urls: [mockImages.cardboard_dump],
+        lat: 12.9695,
+        lng: 77.6370,
+        address: 'Domlur Flyover, Domlur, Bengaluru, Karnataka 560071',
+        ward: 'Ward 112 (Domlur)',
+        reporter_id: 'citizen_4',
+        upvote_count: 12,
+        report_count: 2,
+        assigned_to: 'officer_1',
+        department: 'swm',
+        ai_category: 'illegal_dumping',
+        ai_severity: 3,
+        ai_confidence: 0.87,
+        created_at: daysAgo(25),
+        updated_at: daysAgo(15),
+        resolved_at: daysAgo(15),
+        before_photo_url: mockImages.cardboard_dump,
+        after_photo_url: mockImages.cleaned_bins,
         ai_resolution_validated: true,
-        ai_resolution_confidence: 0.91
+        ai_resolution_confidence: 0.91,
+        est_weight_kg: 320
       }
     ];
 
@@ -547,7 +507,7 @@ const DB = {
         actor_id: issue.reporter_id,
         actor_role: 'citizen',
         action: 'reported',
-        note: 'Issue reported to the civic authority.',
+        note: 'Complaint reported with photo and GPS location.',
         created_at: issue.created_at
       });
 
@@ -558,7 +518,7 @@ const DB = {
           actor_id: issue.assigned_to,
           actor_role: 'authority',
           action: 'assigned',
-          note: `Issue assigned to Department Officer for resolution.`,
+          note: `Assigned to BBMP SWM officer for cleanup.`,
           created_at: new Date(new Date(issue.created_at).getTime() + 12 * 60 * 60 * 1000).toISOString()
         });
 
@@ -568,7 +528,7 @@ const DB = {
           actor_id: issue.assigned_to,
           actor_role: 'authority',
           action: 'status_changed',
-          note: 'Status changed to In Progress. Field crew dispatched.',
+          note: 'Status changed to In Progress. Cleanup crew dispatched.',
           created_at: new Date(new Date(issue.created_at).getTime() + 24 * 60 * 60 * 1000).toISOString()
         });
       }
@@ -580,7 +540,7 @@ const DB = {
           actor_id: 'officer_1',
           actor_role: 'system_ai',
           action: 'ai_validated',
-          note: `AI comparison: resolution confirmed (confidence: ${(issue.ai_resolution_confidence * 100).toFixed(0)}%).`,
+          note: `AI comparison: cleanup confirmed (confidence: ${(issue.ai_resolution_confidence * 100).toFixed(0)}%).`,
           created_at: new Date(new Date(issue.resolved_at).getTime() - 10 * 60 * 1000).toISOString()
         });
 
@@ -590,7 +550,7 @@ const DB = {
           actor_id: issue.assigned_to,
           actor_role: 'authority',
           action: 'resolved',
-          note: 'Issue marked resolved with photo verification.',
+          note: 'Complaint closed with cleanup photo verification.',
           created_at: issue.resolved_at
         });
       }
@@ -619,7 +579,7 @@ const DB = {
         issue_id: 'issue_001',
         user_id: 'citizen_2',
         type: 'comment',
-        content: 'Almost fell here last night while riding my scooter. Very glad this is reported. Authorities please fix this ASAP!',
+        content: 'This plastic heap keeps growing every day and the smell is terrible near the junction. BBMP please clear it ASAP!',
         created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
       },
       {
@@ -627,7 +587,7 @@ const DB = {
         issue_id: 'issue_001',
         user_id: 'citizen_4',
         type: 'comment',
-        content: 'I also submitted a report for this, it seems my report was correctly merged into this main thread. Thanks for coordinates mapping.',
+        content: 'I also reported this dump, glad my report was merged into this one. Six days and still no pickup.',
         created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
       },
       {
@@ -635,7 +595,7 @@ const DB = {
         issue_id: 'issue_002',
         user_id: 'citizen_1',
         type: 'comment',
-        content: 'It has been dark here for almost a week now. Local shops also closed early because of lack of street lighting.',
+        content: 'This bin has not been emptied in over a week. Dogs pull the garbage bags onto the road every night.',
         created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString()
       },
       {
@@ -651,7 +611,7 @@ const DB = {
         issue_id: 'issue_005',
         user_id: 'citizen_2',
         type: 'comment',
-        content: 'This drain needs to be unclogged. Every rain causes massive blockages here.',
+        content: 'The shops dump fresh cardboard here every night. Hope the BBMP crew also fines them this time.',
         created_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
       }
     ];
@@ -687,23 +647,12 @@ const DB = {
       await this.put('badges', b);
     }
 
-    // Seed Predictions (Hotspots)
+    // Seed Predictions (Hotspots). GeoJSON order: [lng, lat]
     const seedPredictions = [
       {
         id: 'pred_1',
-        zone_polygon: {
-          type: 'Polygon',
-          coordinates: [
-            [
-              [12.973, 77.638],
-              [12.977, 77.638],
-              [12.977, 77.643],
-              [12.973, 77.643],
-              [12.973, 77.638]
-            ]
-          ]
-        },
-        predicted_category: 'garbage',
+        zone_polygon: { type: 'Polygon', coordinates: [[[77.638, 12.973], [77.643, 12.973], [77.643, 12.977], [77.638, 12.977], [77.638, 12.973]]] },
+        predicted_category: 'illegal_dumping',
         risk_score: 87,
         historical_count: 14,
         prediction_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
@@ -712,19 +661,8 @@ const DB = {
       },
       {
         id: 'pred_2',
-        zone_polygon: {
-          type: 'Polygon',
-          coordinates: [
-            [
-              [12.969, 77.641],
-              [12.972, 77.641],
-              [12.972, 77.646],
-              [12.969, 77.646],
-              [12.969, 77.641]
-            ]
-          ]
-        },
-        predicted_category: 'pothole',
+        zone_polygon: { type: 'Polygon', coordinates: [[[77.641, 12.969], [77.646, 12.969], [77.646, 12.972], [77.641, 12.972], [77.641, 12.969]]] },
+        predicted_category: 'waste_burning',
         risk_score: 92,
         historical_count: 22,
         prediction_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
@@ -743,27 +681,23 @@ const DB = {
         id: 'report_2026_05',
         month: 5,
         year: 2026,
-        city: 'MetroCity',
+        city: 'Bengaluru',
         total_reported: 142,
         total_resolved: 110,
         avg_resolution_hours: 38.5,
         department_breakdown: {
-          roads: { reported: 45, resolved: 36 },
-          electricity: { reported: 32, resolved: 28 },
-          water: { reported: 25, resolved: 20 },
-          sanitation: { reported: 30, resolved: 21 },
-          municipality: { reported: 10, resolved: 5 }
+          swm: { reported: 112, resolved: 88 },
+          engineering: { reported: 22, resolved: 17 },
+          health: { reported: 8, resolved: 5 }
         },
         category_breakdown: {
-          pothole: 40,
-          streetlight: 32,
-          water_leakage: 25,
-          garbage: 30,
-          flooding: 8,
-          road_damage: 5,
-          vandalism: 2,
-          encroachment: 0,
-          other: 0
+          illegal_dumping: 48,
+          overflowing_bin: 36,
+          waste_burning: 14,
+          construction_debris: 22,
+          plastic_litter: 12,
+          e_waste: 4,
+          other: 6
         },
         is_public: true,
         pdf_url: '#/report/download/may2026',
@@ -775,13 +709,13 @@ const DB = {
       await this.put('monthly_reports', r);
     }
 
-    localStorage.setItem('civicfix_seed_version', CURRENT_SEED_VERSION);
-    console.log('Database seeded successfully with version:', CURRENT_SEED_VERSION);
+    await this.put('meta', { id: 'seed', version: SEED_VERSION });
+    console.log('Server DB seeded:', SEED_VERSION);
   },
 
   // Public reset method for demo and judge testing
   async resetDemoData() {
-    localStorage.removeItem('civicfix_seed_version');
+    await this.delete('meta', 'seed');
     await this.seedIfNeeded();
     window.dispatchEvent(new CustomEvent('db-update'));
     return true;

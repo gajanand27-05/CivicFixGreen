@@ -21,8 +21,8 @@ const SplashPage = {
                 <path d="M50,140 Q100,110 150,140" stroke="#93C5FD" stroke-width="4" fill="none"/>
               </svg>
             </div>
-            <h1 class="splash-title">Welcome to CivicFix</h1>
-            <p class="splash-desc">Make your community a better place. Report potholes, broken streetlights, waste overflow, and water leakages directly to city authorities in seconds.</p>
+            <h1 class="splash-title">Welcome to CivicFix Green</h1>
+            <p class="splash-desc">See garbage dumped on a street corner? Snap a photo and we'll email a complaint to the nearest BBMP office, then follow up until it's cleaned.</p>
           </div>
 
           <!-- Slide 2 -->
@@ -44,7 +44,7 @@ const SplashPage = {
               </svg>
             </div>
             <h1 class="splash-title">AI-Powered Classification</h1>
-            <p class="splash-desc">Just snap a photo. CivicFix uses Gemma 4 Vision AI to automatically classify the issue, suggest a title, map the coordinates, and assign the proper department.</p>
+            <p class="splash-desc">Gemini AI confirms it's a dump, rates severity, writes the complaint, and later verifies BBMP's cleanup photo before closing it.</p>
           </div>
 
           <!-- Slide 3 -->

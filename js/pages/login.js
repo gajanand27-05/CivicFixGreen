@@ -16,8 +16,8 @@ const LoginPage = {
                 <path d="M208,248 L238,278 L304,200" fill="none" stroke="#1A56DB" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
             </div>
-            <h1>Welcome to CivicFix</h1>
-            <p>Resolve local issues together</p>
+            <h1>Welcome to CivicFix Green</h1>
+            <p>Report garbage dumps. We follow up with BBMP until they are cleared.</p>
           </div>
           
           <div id="auth-error" class="auth-error-banner" style="display: none;"></div>
@@ -95,7 +95,7 @@ const LoginPage = {
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
                 </svg>
                 <h3>Sign in with Google</h3>
-                <p>Choose an account to continue to CivicFix</p>
+                <p>Choose an account to continue to CivicFix Green</p>
               </div>
 
               <div class="google-accounts-list">
@@ -115,11 +115,11 @@ const LoginPage = {
                   </div>
                 </button>
 
-                <button type="button" class="google-account-btn" data-name="Officer Rajesh Kumar" data-email="officer.rajesh@gmail.com" data-role="authority" data-points="0" data-avatar="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=150&h=150&q=80">
+                <button type="button" class="google-account-btn" data-name="Officer Ramesh Kumar" data-email="officer.ramesh@gmail.com" data-role="authority" data-points="0" data-avatar="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=150&h=150&q=80">
                   <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=150&h=150&q=80" class="google-acc-avatar" alt="Avatar">
                   <div class="google-acc-details">
-                    <div class="google-acc-name">Rajesh Kumar <span class="google-acc-role-badge">Field Officer</span></div>
-                    <div class="google-acc-email">officer.rajesh@gmail.com</div>
+                    <div class="google-acc-name">Ramesh Kumar <span class="google-acc-role-badge">BBMP SWM Officer</span></div>
+                    <div class="google-acc-email">officer.ramesh@gmail.com</div>
                   </div>
                 </button>
               </div>
@@ -132,8 +132,8 @@ const LoginPage = {
           </div>
 
           <div class="auth-footer">
-            <p>New to CivicFix? <a href="#/signup">Create an account</a></p>
-            <p class="mt-2"><a href="#/public" class="transparency-link"><i data-lucide="eye" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>View Public Transparency Page</a></p>
+            <p>New to CivicFix Green? <a href="#/signup">Create an account</a></p>
+            <p class="mt-2"><a href="#/public" class="transparency-link"><i data-lucide="eye" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>View Bengaluru Clean City Board</a></p>
           </div>
         </div>
       </div>
@@ -272,10 +272,10 @@ const LoginPage = {
     // Reset Demo DB Handler
     if (resetDbBtn) {
       resetDbBtn.addEventListener('click', async () => {
-        if (confirm('Reset demo database to fresh realistic issues and users?')) {
+        if (confirm('Reset demo database to fresh waste complaints and users?')) {
           if (DB && typeof DB.resetDemoData === 'function') {
             await DB.resetDemoData();
-            App.showToast('Database Reset', 'Demo data refreshed with realistic issues.', 'success');
+            App.showToast('Database Reset', 'Demo data refreshed with Bengaluru waste complaints.', 'success');
           }
         }
       });

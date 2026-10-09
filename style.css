@@ -2691,3 +2691,9 @@ html.dark .hero-badge {
 
 
 
+
+/* ===== CivicFix Green ===== */
+.green-note { background: rgba(22,163,74,.1); border: 1px solid rgba(22,163,74,.3); border-radius: 10px; padding: 10px 14px; }
+.green-warn { background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.35); border-radius: 10px; padding: 10px 14px; }
+.overdue-row td { background: rgba(225,29,72,.08); }
+.ticket-chip { font-family: monospace; font-weight: 700; font-size: .75rem; padding: 2px 8px; border-radius: 6px; background: rgba(37,99,235,.12); color: #2563EB; }

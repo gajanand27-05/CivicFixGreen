@@ -13,12 +13,12 @@ const HomePage = {
       <div class="feed-container">
         <!-- Modern Web Hero Banner -->
         <div class="home-hero-banner">
-          <div class="hero-badge"><i data-lucide="sparkles"></i> AI-Powered Civic Platform</div>
-          <h1 class="hero-title">Report, Track & Resolve Community Issues</h1>
-          <p class="hero-subtitle">CivicFix combines multimodal AI with transparent municipal workflows to fix potholes, broken streetlights, water leaks, and waste hazards in real-time.</p>
+          <div class="hero-badge"><i data-lucide="sparkles"></i> AI for a Cleaner Bengaluru</div>
+          <h1 class="hero-title">Spot a Garbage Dump? Snap It. We'll Chase It.</h1>
+          <p class="hero-subtitle">CivicFix Green traces the location, emails a formal complaint to the nearest BBMP office, and follows up until the spot is verified clean.</p>
           <div class="hero-actions">
             <button class="btn btn-primary" onclick="Router.navigate('#/report')">
-              <i data-lucide="plus-circle"></i> Report an Issue
+              <i data-lucide="camera"></i> Report a Garbage Dump
             </button>
             <button class="btn btn-outline" onclick="Router.navigate('#/map')">
               <i data-lucide="map"></i> Explore Live Map
@@ -29,44 +29,23 @@ const HomePage = {
           </div>
           <div class="hero-stats-row">
             <div class="hero-stat-item">
-              <span class="hero-stat-val" id="hero-stat-total">10+</span>
-              <span class="hero-stat-label">Reported Issues</span>
+              <span class="hero-stat-val" id="hero-stat-total">0</span>
+              <span class="hero-stat-label">Dumps Reported</span>
             </div>
             <div class="hero-stat-item">
-              <span class="hero-stat-val">94%</span>
-              <span class="hero-stat-label">AI Accuracy</span>
+              <span class="hero-stat-val" id="hero-stat-resolved">0</span>
+              <span class="hero-stat-label">Verified Cleanups</span>
             </div>
             <div class="hero-stat-item">
-              <span class="hero-stat-val">26.4h</span>
-              <span class="hero-stat-label">Avg Response SLA</span>
+              <span class="hero-stat-val" id="hero-stat-kg">0</span>
+              <span class="hero-stat-label">kg Waste Cleared</span>
             </div>
             <div class="hero-stat-item">
-              <span class="hero-stat-val" id="hero-stat-resolved">4</span>
-              <span class="hero-stat-label">Verified Fixes</span>
+              <span class="hero-stat-val" id="hero-stat-overdue">0</span>
+              <span class="hero-stat-label">Overdue (5+ days)</span>
             </div>
           </div>
-        <!-- Live Municipal 311 Gateway Bar -->
-        <div class="live-govt-bar" style="background: linear-gradient(135deg, rgba(30, 58, 138, 0.08), rgba(14, 165, 233, 0.08)); border: 1px solid rgba(14, 165, 233, 0.25); border-radius: 14px; padding: 14px 20px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 14px;">
-            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(14, 165, 233, 0.15); color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 22px;">
-              🏛️
-            </div>
-            <div>
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary, #0f172a);">Live Municipal 311 Open Data Gateway</span>
-                <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; background: rgba(16, 185, 129, 0.15); color: #059669; font-size: 0.72rem; font-weight: 700; text-transform: uppercase;">
-                  <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; display: inline-block;"></span> Live API Connected
-                </span>
-              </div>
-              <p style="margin: 2px 0 0; font-size: 0.8rem; color: var(--text-secondary, #64748b);">
-                Directly stream real-time citizen grievance tickets from official municipal Open311 / Socrata Open Data endpoints.
-              </p>
-            </div>
-          </div>
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <button id="sync-govt-tickets-btn" class="btn btn-primary" style="font-size: 0.82rem; padding: 8px 16px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);">
-              <i data-lucide="radio"></i> <span>Fetch Live Govt 311 Tickets</span>
-            </button>
+        </div>
           </div>
         </div>
 
@@ -83,7 +62,7 @@ const HomePage = {
               <button class="pill active" data-filter="all">All</button>
               <button class="pill" data-filter="open">Open</button>
               <button class="pill" data-filter="in_progress">In Progress</button>
-              <button class="pill" data-filter="resolved">Resolved</button>
+              <button class="pill" data-filter="resolved">Closed</button>
               <button class="pill" data-filter="near_me">Near Me</button>
               <button class="pill" data-filter="my_reports">My Reports</button>
             </div>
@@ -146,43 +125,27 @@ const HomePage = {
       this.renderList();
     });
 
-    // Live Govt 311 Sync Listener
-    const syncBtn = document.getElementById('sync-govt-tickets-btn');
-    if (syncBtn) {
-      syncBtn.addEventListener('click', async () => {
-        syncBtn.disabled = true;
-        const originalText = syncBtn.innerHTML;
-        syncBtn.innerHTML = `<i data-lucide="loader-2" class="spin"></i> Syncing Live 311...`;
-        if (window.lucide) window.lucide.createIcons();
-        
-        try {
-          if (window.GovtDataService) {
-            const res = await window.GovtDataService.syncGovtTicketsToDB(8);
-            App.showToast(`Fetched & ingested ${res.syncedCount} live municipal tickets!`, 'success');
-            await this.loadIssues();
-          } else {
-            App.showToast('Govt Data Service not loaded', 'error');
-          }
-        } catch (err) {
-          console.error('Govt sync failed:', err);
-          App.showToast('Failed to fetch live govt tickets', 'error');
-        } finally {
-          syncBtn.disabled = false;
-          syncBtn.innerHTML = originalText;
-          if (window.lucide) window.lucide.createIcons();
-        }
-      });
-    }
-
     // Listen for database updates (like upvote increments or status advances from polling)
     window.addEventListener('db-update', async () => {
+      if (!document.getElementById('issues-list-container')) return; // feed not on screen
       await this.loadIssues();
     });
+  },
+
+  renderHeroStats() {
+    const closed = this.issues.filter(i => i.status === 'resolved');
+    const kg = closed.reduce((sum, i) => sum + (Number(i.est_weight_kg) || 0), 0);
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.innerText = v; };
+    set('hero-stat-total', this.issues.length);
+    set('hero-stat-resolved', closed.length);
+    set('hero-stat-kg', Math.round(kg).toLocaleString('en-IN'));
+    set('hero-stat-overdue', this.issues.filter(i => Green.isOverdue(i)).length);
   },
 
   async loadIssues() {
     this.issues = await DB.getAll('issues');
     this.verifications = await DB.getAll('verifications');
+    this.renderHeroStats();
     this.renderList();
   },
 
@@ -249,15 +212,7 @@ const HomePage = {
       const timeStr = App.formatTimeAgo(issue.created_at);
       const isUpvoted = false; // We will check user's verification table upvotes
 
-      let categoryIcon = 'help-circle';
-      if (issue.category === 'pothole') categoryIcon = 'alert-triangle';
-      if (issue.category === 'streetlight') categoryIcon = 'lightbulb';
-      if (issue.category === 'water_leakage') categoryIcon = 'droplets';
-      if (issue.category === 'garbage') categoryIcon = 'trash-2';
-      if (issue.category === 'flooding') categoryIcon = 'waves';
-      if (issue.category === 'road_damage') categoryIcon = 'cone';
-      if (issue.category === 'vandalism') categoryIcon = 'palette';
-      if (issue.category === 'encroachment') categoryIcon = 'store';
+      const categoryIcon = Green.icon(issue.category);
 
       return `
         <div class="issue-card" onclick="HomePage.openIssueDetails('${issue.id}')">
@@ -270,14 +225,10 @@ const HomePage = {
             <div class="card-meta-row">
               <span class="category-tag">
                 <i data-lucide="${categoryIcon}"></i>
-                ${issue.category.replace('_', ' ')}
+                ${Green.label(issue.category)}
               </span>
-              ${issue.is_govt_feed ? `
-                <span class="govt-badge" style="background: rgba(14, 165, 233, 0.12); color: #0284c7; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(14, 165, 233, 0.25);">
-                  <i data-lucide="building-2"></i> Govt 311: ${issue.govt_ticket_id || 'Verified'}
-                </span>
-              ` : ''}
-              <span class="status-pill ${statusClass}">${issue.status.replace('_', ' ')}</span>
+              ${issue.complaint ? `<span class="ticket-chip">${issue.complaint.ticket_id}</span>` : ''}
+              <span class="status-pill ${statusClass}">${Green.statusLabel(issue.status)}</span>
             </div>
             
             <h3 class="issue-card-title">${issue.title}</h3>
@@ -395,7 +346,7 @@ const HomePage = {
     const modal = document.getElementById('issue-modal');
     const card = modal.querySelector('.modal-card');
 
-    let timelineSteps = ['Reported', 'Verified', 'Assigned', 'In Progress', 'Resolved'];
+    let timelineSteps = ['Reported', 'Verified', 'Assigned', 'In Progress', 'Closed'];
     let currentStepIndex = 0;
     if (issue.status === 'open') currentStepIndex = 1;
     if (issue.status === 'in_progress') currentStepIndex = 3;
@@ -456,7 +407,7 @@ const HomePage = {
 
         <div class="modal-section">
           <div class="modal-meta-row">
-            <span class="status-pill status-${issue.status}">${issue.status.replace('_', ' ')}</span>
+            <span class="status-pill status-${issue.status}">${Green.statusLabel(issue.status)}</span>
             <span class="severity-badge severity-${issue.severity}">Severity ${issue.severity}</span>
             <span class="ward-tag"><i data-lucide="map-pin"></i> ${issue.ward}</span>
           </div>
@@ -483,6 +434,16 @@ const HomePage = {
         <!-- Timeline section -->
         <div class="modal-section">
           <h3>Progress Timeline</h3>
+          ${issue.complaint ? `
+          <div class="green-note mb-3">
+            <strong>Complaint ${issue.complaint.ticket_id}</strong>
+            ${issue.complaint.email_status === 'sent'
+              ? `emailed to ${issue.complaint.office_name}`
+              : `registered with ${issue.complaint.office_name} (email not sent — tracked in app)`}
+            on ${new Date(issue.complaint.sent_at).toLocaleString()}<br>
+            Days open: ${Green.daysOpen(issue)} · Reminders sent: ${issue.complaint.reminder_count || 0} · BBMP replies: ${issue.complaint.replies || 0}
+            ${Green.isOverdue(issue) ? '<br><strong style="color:#E11D48;">Overdue: reminders active</strong>' : ''}
+          </div>` : ''}
           <div class="visual-timeline">
             ${timelineHtml}
           </div>

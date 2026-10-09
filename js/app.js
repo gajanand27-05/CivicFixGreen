@@ -7,14 +7,14 @@ const App = {
   syncInterval: null,
 
   async init() {
-    console.log('Bootstrapping CivicFix App...');
+    console.log('Bootstrapping CivicFix Green...');
 
     // 1. Initialize DB and Seeding
     try {
       await DB.init();
       await DB.seedIfNeeded();
     } catch (err) {
-      console.error('Failed to initialize IndexedDB:', err);
+      console.error('Server not reachable. Start it with: uvicorn server.main:app --port 8000', err);
     }
 
     // 2. Initialize Session
@@ -24,7 +24,7 @@ const App = {
       try {
         caches.keys().then(keys => {
           keys.forEach(key => {
-            if (key !== 'civicfix-cache-v5') {
+            if (key !== 'civicfix-cache-v6') {
               console.log('Clearing old cache to force update:', key);
               caches.delete(key);
             }
@@ -96,7 +96,7 @@ const App = {
       }
     } else {
       // Default welcome notification
-      this.addNotification('Welcome to CivicFix!', 'Report local issues, earn badges, and watch your neighborhood transform.', 'info');
+      this.addNotification('Welcome to CivicFix Green!', 'Snap a garbage dump and we will chase BBMP until it is cleaned.', 'info');
     }
   },
 
@@ -183,127 +183,23 @@ const App = {
     });
   },
 
-  // Setup live sync simulating websockets / polling updates every 30s
+  // Pull real notifications written by the server (complaint raised, reminders, BBMP replies, status changes)
   startLiveSync() {
     if (this.syncInterval) clearInterval(this.syncInterval);
-
-    this.syncInterval = setInterval(async () => {
+    const pull = async () => {
       if (!Auth.isLoggedIn()) return;
       const user = Auth.getCurrentUser();
-      
-      // Update DB state randomly
-      const issues = await DB.getAll('issues');
-      const openIssues = issues.filter(i => i.status === 'open');
-      const progressIssues = issues.filter(i => i.status === 'in_progress');
-
-      let updated = false;
-
-      // 1. Simulating random upvotes on open issues (50% chance)
-      if (openIssues.length > 0 && Math.random() > 0.5) {
-        const selected = openIssues[Math.floor(Math.random() * openIssues.length)];
-        selected.upvote_count += Math.floor(Math.random() * 3) + 1;
-        await DB.put('issues', selected);
-        updated = true;
-
-        // If it crosses 10 upvotes, trigger push notification for reporter
-        if (selected.upvote_count >= 10 && selected.reporter_id === user.id) {
-          this.addNotification(
-            'Popular Issue!',
-            `Your report "${selected.title.substring(0, 30)}..." has received over 10 upvotes!`,
-            'success',
-            selected.id
-          );
-        }
+      const all = await DB.getAll('notifications');
+      const mine = all.filter(n => n.user_id === user.id && !n.delivered)
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      for (const n of mine) {
+        this.addNotification(n.title, n.message, n.type, n.issue_id);
+        await DB.put('notifications', { ...n, delivered: true });
       }
-
-      // 2. Simulating status change by authority (10% chance)
-      if (openIssues.length > 0 && Math.random() > 0.90) {
-        const selected = openIssues[Math.floor(Math.random() * openIssues.length)];
-        selected.status = 'in_progress';
-        selected.assigned_to = 'officer_1';
-        selected.updated_at = new Date().toISOString();
-        await DB.put('issues', selected);
-        
-        await DB.put('issue_timeline', {
-          id: `t_${selected.id}_live_progress`,
-          issue_id: selected.id,
-          actor_id: 'officer_1',
-          actor_role: 'authority',
-          action: 'status_changed',
-          note: 'Field crew assigned to resolve issue. Status changed to In Progress.',
-          created_at: new Date().toISOString()
-        });
-
-        updated = true;
-
-        if (selected.reporter_id === user.id) {
-          this.addNotification(
-            'Issue In Progress',
-            `Work has started on your report: "${selected.title.substring(0, 30)}..."`,
-            'warning',
-            selected.id
-          );
-        }
-      }
-
-      // 3. Simulating resolution of an issue (10% chance)
-      if (progressIssues.length > 0 && Math.random() > 0.90) {
-        const selected = progressIssues[Math.floor(Math.random() * progressIssues.length)];
-        selected.status = 'resolved';
-        selected.resolved_at = new Date().toISOString();
-        selected.updated_at = new Date().toISOString();
-        selected.after_photo_url = DB.getSvgDataUrl(selected.category, true);
-        selected.ai_resolution_validated = true;
-        selected.ai_resolution_confidence = 0.94;
-        await DB.put('issues', selected);
-
-        await DB.put('issue_timeline', {
-          id: `t_${selected.id}_live_resolved_ai`,
-          issue_id: selected.id,
-          actor_id: 'officer_1',
-          actor_role: 'system_ai',
-          action: 'ai_validated',
-          note: 'AI validation: resolved status confirmed (confidence: 94%).',
-          created_at: new Date(Date.now() - 5 * 1000).toISOString()
-        });
-
-        await DB.put('issue_timeline', {
-          id: `t_${selected.id}_live_resolved`,
-          issue_id: selected.id,
-          actor_id: 'officer_1',
-          actor_role: 'authority',
-          action: 'resolved',
-          note: 'Resolution verified and approved. Issue resolved.',
-          created_at: new Date().toISOString()
-        });
-
-        updated = true;
-
-        if (selected.reporter_id === user.id) {
-          // Award 100 points to user
-          const reporter = await DB.get('users', selected.reporter_id);
-          if (reporter) {
-            reporter.points += 100;
-            await DB.put('users', reporter);
-            if (user.id === reporter.id) {
-              await Auth.refreshUser();
-            }
-          }
-
-          this.addNotification(
-            'Issue Resolved!',
-            `Great news! Your report "${selected.title.substring(0, 30)}..." has been marked resolved. (+100 points)`,
-            'success',
-            selected.id
-          );
-        }
-      }
-
-      // If database changed, dispatch global event so pages update their views
-      if (updated) {
-        window.dispatchEvent(new CustomEvent('db-update'));
-      }
-    }, 30000); // Poll/Sync every 30 seconds
+      if (mine.length > 0) window.dispatchEvent(new CustomEvent('db-update'));
+    };
+    pull().catch(console.error);
+    this.syncInterval = setInterval(() => pull().catch(console.error), 15000);
   },
 
   setupGlobalEvents() {

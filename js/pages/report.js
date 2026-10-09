@@ -1,16 +1,18 @@
 // js/pages/report.js
-// Issue Reporting Wizard (5 Steps)
+// Garbage-dump complaint wizard: Photo -> AI check -> Location + nearest office -> Details -> Send
 
 const ReportPage = {
   currentStep: 1,
   mediaFiles: [], // array of dataURLs
   aiSuggestions: null,
-  locationData: { lat: 12.9716, lng: 77.5946, address: '', ward: 'Ward 4' },
+  locationData: { lat: 12.9716, lng: 77.6412, address: '', ward: '' },
   map: null,
   marker: null,
   mediaRecorder: null,
   audioChunks: [],
   isRecordingAudio: false,
+  office: null,
+  complaint: null,
 
   async render() {
     return `
@@ -28,19 +30,19 @@ const ReportPage = {
             <div class="step-dot" data-step="5">5</div>
           </div>
           <div class="progress-labels-row">
-            <span>Media</span>
-            <span>AI Classify</span>
+            <span>Photo</span>
+            <span>AI Check</span>
             <span>Location</span>
-            <span>Details</span>
-            <span>Submit</span>
+            <span>Complaint</span>
+            <span>Send</span>
           </div>
         </div>
 
         <div class="wizard-card">
           <!-- STEP 1: MEDIA CAPTURE -->
           <div class="wizard-step-panel" id="step-1-panel">
-            <h2>Step 1: Capture Media</h2>
-            <p class="text-muted">Take a photo or upload up to 5 images from your gallery.</p>
+            <h2>Step 1: Photo of the Garbage Dump</h2>
+            <p class="text-muted">Take a live photo or upload one. We trace the location automatically.</p>
             
             <div class="camera-capture-box" id="camera-click-box">
               <i data-lucide="camera" class="camera-icon"></i>
@@ -56,6 +58,8 @@ const ReportPage = {
               <button class="btn btn-outline" id="webcam-toggle-btn" style="display:none;">Use Camera Live</button>
             </div>
 
+            <div id="gps-status" class="text-muted mt-2">📍 Requesting location access…</div>
+
             <div class="thumbnails-container" id="media-thumbnails">
               <!-- Thumbnail previews -->
             </div>
@@ -63,39 +67,20 @@ const ReportPage = {
 
           <!-- STEP 2: AI CLASSIFICATION -->
           <div class="wizard-step-panel" id="step-2-panel" style="display: none;">
-            <h2>Step 2: AI Classification</h2>
-            <p class="text-muted">Our AI is analyzing your image to pre-fill details.</p>
+            <h2>Step 2: AI Check</h2>
+            <p class="text-muted">Gemini checks that this is dumped waste and fills in the complaint.</p>
             
-            <div class="simulation-selector-box" id="simulation-selector-box" style="display: none; margin-top: 15px;">
-              <div class="alert alert-info" style="background: rgba(26, 86, 219, 0.1); border: 1px solid rgba(26, 86, 219, 0.2); color: var(--primary-color);">
-                <i data-lucide="info" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 6px;"></i> <strong>Simulation Mode</strong>: Select the issue type in your photo to simulate AI auto-detection.
-              </div>
-              <div class="sim-category-grid">
-                <button class="sim-cat-btn" data-cat="pothole"><i data-lucide="layout-grid"></i> Pothole</button>
-                <button class="sim-cat-btn" data-cat="streetlight"><i data-lucide="lightbulb"></i> Streetlight</button>
-                <button class="sim-cat-btn" data-cat="water_leakage"><i data-lucide="droplet"></i> Water Leak</button>
-                <button class="sim-cat-btn" data-cat="garbage"><i data-lucide="trash-2"></i> Garbage</button>
-                <button class="sim-cat-btn" data-cat="flooding"><i data-lucide="waves"></i> Flooding</button>
-                <button class="sim-cat-btn" data-cat="road_damage"><i data-lucide="navigation-2"></i> Road Damage</button>
-                <button class="sim-cat-btn" data-cat="vandalism"><i data-lucide="palette"></i> Vandalism</button>
-                <button class="sim-cat-btn" data-cat="encroachment"><i data-lucide="store"></i> Encroachment</button>
-                <button class="sim-cat-btn" data-cat="other"><i data-lucide="help-circle"></i> Other</button>
-              </div>
-            </div>
-
             <div class="ai-scanning-overlay" id="ai-scanning-view" style="display: none;">
               <div class="scanning-image-box">
                 <img id="scanning-preview-img" src="" class="scanning-img">
                 <div class="scan-bar"></div>
               </div>
-              <div class="scanning-text"><span class="spinner-sm"></span> Gemma 4 AI Classifying issue...</div>
+              <div class="scanning-text"><span class="spinner-sm"></span> Gemini is checking the photo…</div>
             </div>
 
             <div class="ai-results-form" id="ai-results-form" style="display: none;">
-              <div class="alert alert-info">
-                <i data-lucide="sparkles"></i> AI suggestions loaded. Please verify before submitting.
-              </div>
-              
+              <div id="ai-check-banner" class="mb-3"></div>
+
               <div class="form-group">
                 <label for="report-title">Suggested Title</label>
                 <input type="text" id="report-title" class="form-control" required>
@@ -105,15 +90,7 @@ const ReportPage = {
                 <div class="form-group half-width">
                   <label for="report-category">Category</label>
                   <select id="report-category" class="form-control">
-                    <option value="pothole">Pothole</option>
-                    <option value="streetlight">Streetlight</option>
-                    <option value="water_leakage">Water Leakage</option>
-                    <option value="garbage">Garbage Overflow</option>
-                    <option value="flooding">Flooding</option>
-                    <option value="road_damage">Road Damage</option>
-                    <option value="vandalism">Vandalism</option>
-                    <option value="encroachment">Encroachment</option>
-                    <option value="other">Other</option>
+                    ${Green.categoryOptionsHtml()}
                   </select>
                 </div>
 
@@ -132,11 +109,7 @@ const ReportPage = {
               <div class="form-group">
                 <label for="report-dept">Assigned Department</label>
                 <select id="report-dept" class="form-control" disabled>
-                  <option value="roads">Roads Department</option>
-                  <option value="electricity">Electricity Board</option>
-                  <option value="water">Water Supply & Sewerage</option>
-                  <option value="sanitation">Sanitation & Garbage Clean</option>
-                  <option value="municipality">Municipal Corporation</option>
+                  ${Green.departmentOptionsHtml()}
                 </select>
               </div>
             </div>
@@ -144,8 +117,8 @@ const ReportPage = {
 
           <!-- STEP 3: LOCATION SELECT -->
           <div class="wizard-step-panel" id="step-3-panel" style="display: none;">
-            <h2>Step 3: Pinpoint Location</h2>
-            <p class="text-muted">Auto-detect GPS or drag the pin to match the exact issue spot.</p>
+            <h2>Step 3: Location</h2>
+            <p class="text-muted">Check the pin is on the dump. Drag it or tap the map to adjust.</p>
             
             <button class="btn btn-primary btn-block mb-3" id="gps-locate-btn">
               <i data-lucide="navigation"></i> Auto-detect GPS Coordinates
@@ -163,24 +136,22 @@ const ReportPage = {
               </div>
             </div>
 
-            <div class="form-group">
-              <label for="report-ward">Select Ward/Area</label>
-              <select id="report-ward" class="form-control">
-                <option value="Ward 4">Ward 4 (Indiranagar)</option>
-                <option value="Ward 5">Ward 5 (HAL Stage 2)</option>
-                <option value="Ward 6">Ward 6 (Domlur)</option>
-              </select>
-            </div>
+            <div id="nearest-office-card" class="card mt-3" style="padding:14px;">Finding nearest BBMP office…</div>
           </div>
 
           <!-- STEP 4: DESCRIPTION & AUDIO -->
           <div class="wizard-step-panel" id="step-4-panel" style="display: none;">
-            <h2>Step 4: Additional Details</h2>
-            <p class="text-muted">Type description or tap to speak for voice transcription.</p>
+            <h2>Step 4: Complaint Details</h2>
+            <p class="text-muted">Edit the AI description if needed, or add a voice note.</p>
             
             <div class="form-group">
+              <label for="complainer-email">Your email for updates (optional)</label>
+              <input type="email" id="complainer-email" class="form-control" placeholder="you@example.com">
+            </div>
+
+            <div class="form-group">
               <label for="report-desc">Description (max 500 characters)</label>
-              <textarea id="report-desc" class="form-control" rows="5" maxlength="500" placeholder="Describe the issue, landmarks, hazard details..."></textarea>
+              <textarea id="report-desc" class="form-control" rows="5" maxlength="500" placeholder="Describe the waste, how long it has been there, nearby landmarks…"></textarea>
             </div>
 
             <div class="voice-transcribe-container">
@@ -192,15 +163,15 @@ const ReportPage = {
                 <span class="pulse-red-dot"></span> <span id="record-timer">0:00</span> / 1:00 (Recording...)
               </div>
               <div id="voice-loader" class="voice-loader" style="display: none;">
-                <span class="spinner-sm"></span> Gemma 4 AI transcribing voice...
+                <span class="spinner-sm"></span> Gemini is transcribing your voice note…
               </div>
             </div>
           </div>
 
           <!-- STEP 5: SUMMARY & SUBMIT -->
           <div class="wizard-step-panel" id="step-5-panel" style="display: none;">
-            <h2>Step 5: Review & Submit</h2>
-            <p class="text-muted">Confirm details below before final submission.</p>
+            <h2>Step 5: Review & Send Complaint</h2>
+            <p class="text-muted">This is exactly what BBMP will receive.</p>
             
             <div class="summary-card" id="submission-summary-card">
               <!-- Rendered dynamically -->
@@ -232,13 +203,13 @@ const ReportPage = {
             <div class="success-icon-container">
               <i data-lucide="check" class="success-icon"></i>
             </div>
-            <h1>Report Submitted Successfully!</h1>
+            <h1 id="success-title">Complaint Raised!</h1>
             <p id="success-issue-id" class="success-issue-id"></p>
             <p id="success-points" class="success-points">+50 Points Added to Profile!</p>
             <div class="sla-card" id="success-sla-card">
               <!-- SLA dynamic details -->
             </div>
-            <button class="btn btn-primary btn-block mt-4" id="success-close-btn">Go to Home Feed</button>
+            <button class="btn btn-primary btn-block mt-4" id="success-close-btn">Back to Home Feed</button>
           </div>
         </div>
       </div>
@@ -249,13 +220,22 @@ const ReportPage = {
     this.currentStep = 1;
     this.mediaFiles = [];
     this.aiSuggestions = null;
-    this.locationData = { lat: 12.9716, lng: 77.5946, address: '', ward: 'Ward 4' };
+    this.office = null;
+    this.complaint = null;
+    this.map = null;
+    this.marker = null;
+    this.gpsSource = null;
+    this.locationData = { lat: 12.9716, lng: 77.6412, address: '', ward: '' };
     
     this.updateWizardUI();
     this.setupMediaListeners();
     this.setupWizardNavigation();
     this.setupLocationListeners();
     this.setupVoiceListeners();
+
+    const user = Auth.getCurrentUser();
+    document.getElementById('complainer-email').value = (user && user.email && !user.email.endsWith('@civicfix.gov')) ? user.email : '';
+    this.detectGPS(true);
   },
 
   updateWizardUI() {
@@ -297,7 +277,7 @@ const ReportPage = {
     prevBtn.style.visibility = this.currentStep === 1 ? 'hidden' : 'visible';
     
     if (this.currentStep === 5) {
-      nextBtn.innerText = 'Submit Report';
+      nextBtn.innerText = 'Send Complaint to BBMP';
     } else {
       nextBtn.innerText = 'Next';
     }
@@ -346,17 +326,51 @@ const ReportPage = {
       webcamBtn.style.display = 'none';
     });
 
-    fileInput.addEventListener('change', (e) => {
-      const files = Array.from(e.target.files);
-      files.forEach(file => {
-        if (this.mediaFiles.length >= 5) return;
-        const reader = new FileReader();
-        reader.onload = (loadEvent) => {
-          this.addMediaThumbnail(loadEvent.target.result, file.name);
-        };
-        reader.readAsDataURL(file);
-      });
+    fileInput.addEventListener('change', async (e) => {
+      for (const file of Array.from(e.target.files)) {
+        if (this.mediaFiles.length >= 5) break;
+        if (this.mediaFiles.length === 0) await this.readPhotoGPS(file);
+        this.addMediaThumbnail(await this.compressImage(file), file.name);
+      }
+      e.target.value = '';
     });
+  },
+
+  async readPhotoGPS(file) {
+    if (!window.exifr) return;
+    try {
+      const gps = await exifr.gps(file);
+      if (gps && typeof gps.latitude === 'number') {
+        this.locationData.lat = gps.latitude;
+        this.locationData.lng = gps.longitude;
+        this.locationData.address = '';
+        this.gpsSource = 'photo';
+        this.setGpsStatus('📍 Location read from the photo');
+      }
+    } catch (err) {
+      console.warn('No GPS in photo', err);
+    }
+  },
+
+  compressImage(file, maxSide = 1280) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(img.src);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  },
+
+  setGpsStatus(text) {
+    const el = document.getElementById('gps-status');
+    if (el) el.innerText = text;
   },
 
   captureWebcamPhoto(video, stream) {
@@ -365,7 +379,7 @@ const ReportPage = {
     canvas.height = video.videoHeight || 480;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/jpeg');
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
 
     this.addMediaThumbnail(dataUrl, `webcam_snap_${Date.now()}.jpg`);
 
@@ -408,117 +422,83 @@ const ReportPage = {
     `).join('');
   },
 
-  // STEP 2: AI Classification
+  // STEP 2: AI dump check
   async triggerAIScan() {
     if (this.mediaFiles.length === 0) return;
-
     const scanView = document.getElementById('ai-scanning-view');
     const formView = document.getElementById('ai-results-form');
-    const simBox = document.getElementById('simulation-selector-box');
-    const scanningImg = document.getElementById('scanning-preview-img');
+    const nextBtn = document.getElementById('wizard-next-btn');
+    document.getElementById('scanning-preview-img').src = this.mediaFiles[0].dataUrl;
+    scanView.style.display = 'block';
+    formView.style.display = 'none';
+    nextBtn.disabled = true;
 
-    scanningImg.src = this.mediaFiles[0].dataUrl;
+    let a;
+    try {
+      a = await AI.analyzeDump(this.mediaFiles[0].dataUrl);
+    } catch (err) {
+      console.error(err);
+      App.showToast('AI unavailable', 'Fill in the details manually.', 'warning');
+      a = { is_dump: true, category: 'illegal_dumping', severity: 3, est_weight_kg: 0, suggested_title: '', description: '', confidence: 0, is_mock: true };
+    }
+    this.aiSuggestions = a;
 
-    if (!AI.hasApiKey()) {
-      // Simulation mode: show selection helper
-      scanView.style.display = 'none';
-      formView.style.display = 'none';
-      simBox.style.display = 'block';
+    document.getElementById('report-title').value = a.suggested_title;
+    document.getElementById('report-category').value = a.category;
+    document.getElementById('report-severity').value = a.severity;
+    document.getElementById('report-dept').value = Green.departmentFor(a.category);
+    if (!document.getElementById('report-desc').value) document.getElementById('report-desc').value = a.description;
 
-      // Setup click listeners for simulation buttons
-      const simBtns = simBox.querySelectorAll('.sim-cat-btn');
-      simBtns.forEach(btn => {
-        const newBtn = btn.cloneNode(true);
-        btn.parentNode.replaceChild(newBtn, btn);
-        
-        newBtn.addEventListener('click', async () => {
-          const selectedCat = newBtn.getAttribute('data-cat');
-          simBox.style.display = 'none';
-          scanView.style.display = 'block';
+    const banner = document.getElementById('ai-check-banner');
+    banner.innerHTML = `
+      ${a.is_mock ? '<div class="green-warn mb-2"><strong>Demo mode:</strong> sample AI result (no Gemini key on the server).</div>' : ''}
+      ${a.is_dump
+        ? `<div class="green-note">✅ Gemini confirms a public waste dump. Severity ${a.severity}/5, about ${Math.round(a.est_weight_kg)} kg (confidence ${Math.round(a.confidence * 100)}%).</div>`
+        : `<div class="green-warn">⚠️ This doesn't look like waste dumped in a public place.
+             <div class="mt-2" style="display:flex;gap:8px;flex-wrap:wrap;">
+               <button class="btn btn-secondary" id="ai-retake-btn">Retake photo</button>
+               <button class="btn btn-outline" id="ai-continue-btn">Continue anyway</button>
+             </div></div>`}`;
 
-          // Simulate classification delay with scan laser
-          await new Promise(resolve => setTimeout(resolve, 1800));
+    scanView.style.display = 'none';
+    formView.style.display = 'block';
+    nextBtn.disabled = !a.is_dump;
+    this.setupCategoryChangeListener();
 
-          // Load realistic classification results based on category
-          const categorySuggestions = {
-            pothole: { suggested_title: "Large Pothole Blocking Road Lane", severity: 3, department: "roads" },
-            streetlight: { suggested_title: "Broken Streetlight Causing Dark Street", severity: 2, department: "electricity" },
-            water_leakage: { suggested_title: "Water Pipeline Leakage on Walkway", severity: 3, department: "water" },
-            garbage: { suggested_title: "Overflowing Garbage Pile Near Residential Sector", severity: 3, department: "sanitation" },
-            flooding: { suggested_title: "Severe Street Flooding After Heavy Rains", severity: 4, department: "sanitation" },
-            road_damage: { suggested_title: "Major Asphalt Cracking and Road Damage", severity: 3, department: "roads" },
-            vandalism: { suggested_title: "Public Park Bench Vandalized with Paint", severity: 2, department: "municipality" },
-            encroachment: { suggested_title: "Sidewalk Encroachment by Street Vendors", severity: 3, department: "municipality" },
-            other: { suggested_title: "Reported Civic Hazard in the Neighborhood", severity: 2, department: "municipality" }
-          };
-
-          const suggestions = categorySuggestions[selectedCat] || categorySuggestions['other'];
-          this.aiSuggestions = {
-            category: selectedCat,
-            confidence_score: 0.95,
-            ...suggestions
-          };
-
-          // Populate fields
-          document.getElementById('report-title').value = this.aiSuggestions.suggested_title;
-          document.getElementById('report-category').value = selectedCat;
-          document.getElementById('report-severity').value = this.aiSuggestions.severity;
-          document.getElementById('report-dept').value = this.aiSuggestions.department;
-
-          scanView.style.display = 'none';
-          formView.style.display = 'block';
-          this.setupCategoryChangeListener();
-        });
-      });
-      if (window.lucide) window.lucide.createIcons();
-    } else {
-      // Real API mode
-      simBox.style.display = 'none';
-      scanView.style.display = 'block';
-      formView.style.display = 'none';
-
-      try {
-        const suggestions = await AI.classifyIssue(this.mediaFiles[0].dataUrl, this.mediaFiles[0].name);
-        this.aiSuggestions = suggestions;
-        
-        // Populate fields
-        document.getElementById('report-title').value = suggestions.suggested_title;
-        document.getElementById('report-category').value = suggestions.category.trim();
-        document.getElementById('report-severity').value = suggestions.severity;
-        document.getElementById('report-dept').value = suggestions.department;
-
-        scanView.style.display = 'none';
-        formView.style.display = 'block';
-        this.setupCategoryChangeListener();
-      } catch (err) {
-        console.error(err);
-        App.showToast('AI classification failure', 'Failed to scan image. Please input manually.', 'warning');
-        scanView.style.display = 'none';
-        formView.style.display = 'block';
-      }
+    if (!a.is_dump) {
+      document.getElementById('ai-retake-btn').onclick = () => {
+        this.mediaFiles = [];
+        this.renderThumbnails();
+        this.currentStep = 1;
+        nextBtn.disabled = false;
+        this.updateWizardUI();
+      };
+      document.getElementById('ai-continue-btn').onclick = () => {
+        nextBtn.disabled = false;
+        banner.innerHTML = '<div class="green-warn">Continuing without AI confirmation.</div>';
+      };
     }
   },
 
   setupCategoryChangeListener() {
-    const categorySelect = document.getElementById('report-category');
-    if (categorySelect) {
-      categorySelect.addEventListener('change', (e) => {
-        const depts = {
-          pothole: 'roads',
-          streetlight: 'electricity',
-          water_leakage: 'water',
-          garbage: 'sanitation',
-          flooding: 'municipality',
-          road_damage: 'roads',
-          vandalism: 'municipality',
-          encroachment: 'municipality',
-          other: 'municipality'
-        };
-        const deptSelect = document.getElementById('report-dept');
-        if (deptSelect) {
-          deptSelect.value = depts[e.target.value] || 'municipality';
-        }
-      });
+    document.getElementById('report-category').onchange = (e) => {
+      document.getElementById('report-dept').value = Green.departmentFor(e.target.value);
+    };
+  },
+
+  async loadNearestOffice() {
+    const card = document.getElementById('nearest-office-card');
+    if (!card) return;
+    try {
+      const res = await fetch(`${CONFIG.API_BASE}/api/offices/nearest?lat=${this.locationData.lat}&lng=${this.locationData.lng}`);
+      this.office = await res.json();
+      card.innerHTML = `<strong>🏛️ Nearest office: ${this.office.name}</strong>
+        <div class="text-muted">${this.office.distance_km} km away · ${this.office.email_enabled
+          ? `complaint will be emailed to <code>${this.office.recipient}</code>`
+          : 'complaint will be registered in the app and shown on the officer dashboard'}</div>`;
+    } catch (err) {
+      console.error(err);
+      card.innerHTML = '<span class="text-muted">Could not find the nearest office. Is the server running?</span>';
     }
   },
 
@@ -531,27 +511,32 @@ const ReportPage = {
     lookupBtn.addEventListener('click', () => this.lookupAddressText());
   },
 
-  detectGPS() {
+  detectGPS(silent = false) {
     if (!navigator.geolocation) {
-      App.showToast('Geolocation Unsupport', 'Your browser does not support GPS location.', 'danger');
+      this.setGpsStatus('⚠️ This browser cannot share location: pin it on the map in Step 3.');
       return;
     }
 
-    App.showToast('Locating...', 'Fetching GPS coordinates...', 'info');
+    if (!silent) App.showToast('Locating...', 'Fetching GPS coordinates...', 'info');
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        if (silent && this.gpsSource === 'photo') return; // GPS from the photo wins over device GPS
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         this.locationData.lat = lat;
         this.locationData.lng = lng;
+        this.locationData.address = '';
+        this.gpsSource = 'device';
+        this.setGpsStatus(`📍 Location traced (±${Math.round(pos.coords.accuracy)} m)`);
 
         this.updateMapPosition(lat, lng);
         await this.reverseGeocode(lat, lng);
       },
       (err) => {
-        console.error(err);
-        App.showToast('GPS Timeout', 'Failed to fetch GPS coordinates. Please pin manually.', 'warning');
+        console.warn(err);
+        this.setGpsStatus('⚠️ Location not available. Allow location access, or pin it on the map in Step 3.');
+        if (!silent) App.showToast('GPS unavailable', 'Allow location access or pin the spot manually.', 'warning');
       },
       { enableHighAccuracy: true, timeout: 8000 }
     );
@@ -630,6 +615,13 @@ const ReportPage = {
       });
     }
 
+    if (this.locationData.address) {
+      document.getElementById('report-address').value = this.locationData.address;
+      this.loadNearestOffice();
+    } else {
+      this.reverseGeocode(lat, lng);
+    }
+
     // Pre-register maps failed event to re-load dynamically if authentication triggers
     window.addEventListener('google-maps-failed', () => {
       this.map = null;
@@ -659,19 +651,16 @@ const ReportPage = {
       const data = await response.json();
       const addr = data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
       this.locationData.address = addr;
-      document.getElementById('report-address').value = addr;
+      const addrInput = document.getElementById('report-address');
+      if (addrInput) addrInput.value = addr;
 
-      // Extract Ward if exists in address
-      if (addr.toLowerCase().includes('indiranagar')) {
-        document.getElementById('report-ward').value = 'Ward 4';
-      } else if (addr.toLowerCase().includes('hal')) {
-        document.getElementById('report-ward').value = 'Ward 5';
-      } else if (addr.toLowerCase().includes('domlur')) {
-        document.getElementById('report-ward').value = 'Ward 6';
-      }
+      this.loadNearestOffice();
     } catch (err) {
       console.error(err);
-      document.getElementById('report-address').value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      this.locationData.address = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      const addrInput = document.getElementById('report-address');
+      if (addrInput) addrInput.value = this.locationData.address;
+      this.loadNearestOffice();
     }
   },
 
@@ -690,6 +679,7 @@ const ReportPage = {
         this.locationData.address = data[0].display_name;
 
         this.updateMapPosition(lat, lng);
+        this.loadNearestOffice();
         App.showToast('Location Mapped', 'Map pin placed at address location.', 'success');
       } else {
         App.showToast('Address not found', 'Could not locate that address. Pin manually on map.', 'warning');
@@ -728,7 +718,7 @@ const ReportPage = {
         const stopAndProcess = async (audioDataUrl) => {
           try {
             const category = document.getElementById('report-category')?.value || 'other';
-            const res = await AI.transcribeAudio(audioDataUrl, category);
+            const res = await AI.transcribeAudio(audioDataUrl);
             const transcriptionText = (typeof res === 'string') ? res : (res.transcription || res.text || JSON.stringify(res));
             descField.value = transcriptionText;
             descField.dispatchEvent(new Event('input', { bubbles: true }));
@@ -844,13 +834,18 @@ const ReportPage = {
           return;
         }
         this.locationData.address = address;
-        this.locationData.ward = document.getElementById('report-ward').value;
+        this.locationData.ward = this.office ? `${this.office.zone} Zone` : 'Bengaluru';
         this.currentStep++;
         this.updateWizardUI();
       } else if (this.currentStep === 4) {
+        const email = document.getElementById('complainer-email').value.trim();
+        if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+          App.showToast('Invalid email', 'Please enter a valid email for updates.', 'warning');
+          return;
+        }
         this.currentStep++;
         this.updateWizardUI();
-        this.renderSummary();
+        await this.renderSummary();
       } else if (this.currentStep === 5) {
         // Final Submit
         await this.checkDuplicateAndSubmit();
@@ -858,39 +853,41 @@ const ReportPage = {
     });
   },
 
-  renderSummary() {
-    const summaryCard = document.getElementById('submission-summary-card');
-    if (!summaryCard) return;
+  async renderSummary() {
+    const card = document.getElementById('submission-summary-card');
+    if (!card) return;
+    card.innerHTML = '<span class="spinner-sm"></span> Preparing complaint preview…';
+    const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    try {
+      const res = await fetch(`${CONFIG.API_BASE}/api/complaints/preview`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ issue: this.buildIssueDraft() })
+      });
+      const p = await res.json();
+      card.innerHTML = `
+        <div class="summary-item"><strong>${p.email_enabled ? 'To:' : 'Office:'}</strong>
+          <div>${p.email_enabled ? `${esc(p.to)} (${esc(p.office.name)})` : `${esc(p.office.name)} <span class="text-muted">(in-app complaint; email not configured)</span>`}</div></div>
+        <div class="summary-item"><strong>Subject:</strong> <div>${esc(p.subject)}</div></div>
+        <div class="summary-item"><strong>Photo:</strong>
+          <div class="thumbnails-container mt-1"><div class="thumbnail-item"><img src="${this.mediaFiles[0].dataUrl}"></div></div></div>
+        <div class="summary-item"><strong>Complaint letter:</strong>
+          <pre style="white-space:pre-wrap;font-family:inherit;font-size:0.85rem;max-height:260px;overflow:auto;">${esc(p.body)}</pre></div>`;
+    } catch (err) {
+      console.error(err);
+      card.innerHTML = '<div class="green-warn">Could not load the preview. Is the server running?</div>';
+    }
+  },
 
-    const title = document.getElementById('report-title').value;
-    const cat = document.getElementById('report-category').value;
-    const sev = document.getElementById('report-severity').value;
-    const desc = document.getElementById('report-desc').value;
-
-    summaryCard.innerHTML = `
-      <div class="summary-item">
-        <strong>Issue Photo:</strong>
-        <div class="thumbnails-container mt-1">
-          <div class="thumbnail-item"><img src="${this.mediaFiles[0].dataUrl}"></div>
-        </div>
-      </div>
-      <div class="summary-item">
-        <strong>Title:</strong>
-        <div>${title}</div>
-      </div>
-      <div class="summary-item">
-        <strong>Category / Severity:</strong>
-        <div>${cat.toUpperCase().replace('_', ' ')} / Level ${sev}</div>
-      </div>
-      <div class="summary-item">
-        <strong>Address / Ward:</strong>
-        <div>${this.locationData.address} (${this.locationData.ward})</div>
-      </div>
-      <div class="summary-item">
-        <strong>Description:</strong>
-        <div>${desc || '<i>No description provided.</i>'}</div>
-      </div>
-    `;
+  buildIssueDraft() {
+    return {
+      title: document.getElementById('report-title').value.trim(),
+      description: document.getElementById('report-desc').value.trim(),
+      category: document.getElementById('report-category').value,
+      severity: parseInt(document.getElementById('report-severity').value),
+      est_weight_kg: this.aiSuggestions ? this.aiSuggestions.est_weight_kg : 0,
+      lat: this.locationData.lat,
+      lng: this.locationData.lng,
+      address: this.locationData.address
+    };
   },
 
   async checkDuplicateAndSubmit() {
@@ -915,7 +912,7 @@ const ReportPage = {
       const modal = document.getElementById('duplicate-modal');
       const dialogText = document.getElementById('duplicate-dialog-text');
       
-      dialogText.innerText = `A similar "${category.replace('_', ' ')}" issue was already reported nearby ("${duplicate.title}"). Do you want to add your report to that one instead?`;
+      dialogText.innerText = `A similar "${Green.label(category)}" complaint was already reported nearby ("${duplicate.title}"). Do you want to add your report to that one instead?`;
       modal.style.display = 'flex';
 
       // Yes merge button
@@ -961,7 +958,7 @@ const ReportPage = {
       actor_id: user.id,
       actor_role: user.role,
       action: 'commented',
-      note: 'Co-signed and verified this issue. (+50 points awarded)',
+      note: 'Co-signed this complaint. (+50 points awarded)',
       created_at: new Date().toISOString()
     });
 
@@ -977,7 +974,7 @@ const ReportPage = {
     const department = document.getElementById('report-dept').value;
     const description = document.getElementById('report-desc').value.trim();
 
-    const newIssueId = 'issue_' + Math.floor(Math.random() * 900 + 100);
+    const newIssueId = 'issue_' + Date.now();
 
     const newIssue = {
       id: newIssueId,
@@ -995,10 +992,11 @@ const ReportPage = {
       upvote_count: 0,
       report_count: 1,
       assigned_to: null,
-      department,
+      department: Green.departmentFor(category),
+      est_weight_kg: this.aiSuggestions ? this.aiSuggestions.est_weight_kg : 0,
       ai_category: this.aiSuggestions ? this.aiSuggestions.category : category,
       ai_severity: this.aiSuggestions ? this.aiSuggestions.severity : severity,
-      ai_confidence: this.aiSuggestions ? this.aiSuggestions.confidence_score : 1.0,
+      ai_confidence: this.aiSuggestions ? this.aiSuggestions.confidence : 1.0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       resolved_at: null,
@@ -1010,6 +1008,23 @@ const ReportPage = {
 
     await DB.put('issues', newIssue);
 
+    const nextBtn = document.getElementById('wizard-next-btn');
+    nextBtn.disabled = true;
+    nextBtn.innerText = 'Raising complaint…';
+    try {
+      const sendRes = await fetch(`${CONFIG.API_BASE}/api/complaints/${newIssueId}/send`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ complainer_email: document.getElementById('complainer-email').value.trim() })
+      });
+      if (!sendRes.ok) throw new Error(`send failed (${sendRes.status})`);
+      this.complaint = await sendRes.json();
+    } catch (err) {
+      console.error(err);
+      App.showToast('Complaint saved', 'Your report is saved, but it could not be forwarded to BBMP right now.', 'warning');
+    } finally {
+      nextBtn.disabled = false;
+    }
+
     // Add Timeline Log
     await DB.put('issue_timeline', {
       id: 't_rep_' + Date.now(),
@@ -1017,7 +1032,7 @@ const ReportPage = {
       actor_id: user.id,
       actor_role: user.role,
       action: 'reported',
-      note: 'Issue reported to the civic authority. (+50 points awarded)',
+      note: 'Garbage dump reported with photo and GPS location. (+50 points awarded)',
       created_at: new Date().toISOString()
     });
 
@@ -1063,39 +1078,18 @@ const ReportPage = {
     await DB.put('users', user);
     await Auth.refreshUser();
 
-    // Trigger Notification for Authorities in dashboard (Prompt 9: new issue alert)
-    const newIssueNotify = {
-      id: 'new_issue_notif_' + Date.now(),
-      title: 'New Issue Submitted',
-      message: `A new ${severity} severity issue was submitted in ${this.locationData.ward}.`,
-      type: 'warning',
-      created_at: new Date().toISOString(),
-      read: false
-    };
-    
-    // Save to local storage for officers
-    const savedNotifs = JSON.parse(localStorage.getItem('civicfix_notifications') || '[]');
-    savedNotifs.unshift(newIssueNotify);
-    localStorage.setItem('civicfix_notifications', JSON.stringify(savedNotifs));
-
     // Show Success Screen
     const successOverlay = document.getElementById('success-overlay');
     const successIdEl = document.getElementById('success-issue-id');
     const successSlaEl = document.getElementById('success-sla-card');
     
-    successIdEl.innerText = `Issue Ticket ID: ${issueId}`;
-    
-    // Estimated SLA Resolution Time based on Severity
-    let slaHrs = 48;
-    if (severity === 5) slaHrs = 6;
-    else if (severity === 4) slaHrs = 12;
-    else if (severity === 3) slaHrs = 24;
-
-    successSlaEl.innerHTML = `
-      <strong>Estimated Response Time:</strong>
-      <div class="sla-timer">${slaHrs} Hours</div>
-      <p class="sla-text">Our authorities SLA targets resolving level ${severity} issues within ${slaHrs} hours. You will receive notifications on status updates.</p>
-    `;
+    const c = this.complaint;
+    document.getElementById('success-title').innerText = c && c.email_status === 'sent' ? 'Complaint Emailed to BBMP!' : 'Complaint Raised!';
+    successIdEl.innerText = c ? `Ticket ${c.ticket_id}` : `Issue ${issueId}`;
+    successSlaEl.innerHTML = c ? `
+      <strong>${c.email_status === 'sent' ? 'Emailed to' : 'Registered with'}:</strong> ${c.office_name}
+      <p class="sla-text">We're monitoring it. When BBMP sends a photo of the cleaned spot, AI verifies it and the complaint closes.
+      If there's no response within 5 days, BBMP is reminded and you're notified.</p>` : '';
 
     successOverlay.style.display = 'flex';
     if (window.lucide) window.lucide.createIcons();

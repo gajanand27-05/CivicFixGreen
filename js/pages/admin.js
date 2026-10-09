@@ -23,7 +23,7 @@ const AdminPage = {
             <form id="create-officer-form" class="mt-3">
               <div class="form-group">
                 <label for="officer-name">Officer Full Name</label>
-                <input type="text" id="officer-name" class="form-control" placeholder="Officer Rajesh Kumar" required>
+                <input type="text" id="officer-name" class="form-control" placeholder="Officer Ramesh Kumar" required>
               </div>
 
               <div class="form-group">
@@ -124,7 +124,7 @@ const AdminPage = {
         email,
         password_hash: password,
         role: 'authority',
-        city: 'MetroCity',
+        city: 'Bengaluru',
         ward,
         department: dept,
         points: 0,

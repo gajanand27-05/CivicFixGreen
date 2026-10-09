@@ -1,19 +1,14 @@
 // js/config.js
-// Project API Keys Configurations
+// Frontend configuration. All secrets live on the server (server/.env).
 
 const CONFIG = {
-  GOOGLE_AI_STUDIO_KEY: 'YOUR_GOOGLE_AI_STUDIO_KEY',
-  GOOGLE_MAPS_KEY: 'YOUR_GOOGLE_MAPS_KEY'
+  API_BASE: '' // same origin as the FastAPI server
 };
 window.CONFIG = CONFIG;
 
 const MapHelper = {
   isGoogleMapsAvailable() {
-    const key = (window.CONFIG && window.CONFIG.GOOGLE_MAPS_KEY) || '';
-    const hasValidKey = key.length > 10 && !key.startsWith('YOUR_') && key !== 'REDACTED_GOOGLE_API_KEY';
-    return hasValidKey && typeof google !== 'undefined' && typeof google.maps !== 'undefined' && !window.googleMapsFailed;
+    return false; // Leaflet/OpenStreetMap only; no Maps key in the browser
   }
 };
 window.MapHelper = MapHelper;
-
-

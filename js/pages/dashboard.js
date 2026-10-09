@@ -46,7 +46,7 @@ const DashboardPage = {
           <!-- SUBSECTION 1: OVERVIEW -->
           <div class="dashboard-panel active-panel" id="panel-overview">
             <h1 class="panel-title">City Operations Overview</h1>
-            <p class="text-muted">MetroCity Civic Health & Resolution Trends.</p>
+            <p class="text-muted">Bengaluru waste-dump complaints and cleanup trends.</p>
 
             <!-- Metric Cards -->
             <div class="metrics-grid mt-4">
@@ -73,7 +73,7 @@ const DashboardPage = {
               </div>
               <div class="metric-card card">
                 <div class="metric-header">
-                  <span class="m-title">Resolved</span>
+                  <span class="m-title">Closed</span>
                   <i data-lucide="check-circle" class="color-success"></i>
                 </div>
                 <div class="metric-value" id="m-resolved">0</div>
@@ -131,7 +131,7 @@ const DashboardPage = {
             <div class="panel-header-action">
               <div>
                 <h1 class="panel-title">Issues Management Log</h1>
-                <p class="text-muted">Review, assign, and update reported civic problems.</p>
+                <p class="text-muted">Review, assign and close waste-dump complaints. Overdue complaints are highlighted.</p>
               </div>
             </div>
 
@@ -143,18 +143,15 @@ const DashboardPage = {
                   <option value="all">All</option>
                   <option value="open">Open</option>
                   <option value="in_progress">In Progress</option>
-                  <option value="resolved">Resolved</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="resolved">Closed</option>
                 </select>
               </div>
               <div class="filter-row-item">
                 <label>Category</label>
                 <select id="dash-filter-category" class="form-control">
                   <option value="all">All</option>
-                  <option value="pothole">Pothole</option>
-                  <option value="streetlight">Streetlight</option>
-                  <option value="water_leakage">Water Leakage</option>
-                  <option value="garbage">Garbage</option>
-                  <option value="flooding">Flooding</option>
+                  ${Green.categoryOptionsHtml()}
                 </select>
               </div>
               <div class="filter-row-item">
@@ -174,10 +171,7 @@ const DashboardPage = {
               <div style="display:flex;gap:10px;">
                 <select id="bulk-assign-dept" class="form-control" style="width:180px;">
                   <option value="">Bulk Assign Dept...</option>
-                  <option value="roads">Roads Dept</option>
-                  <option value="electricity">Electricity Board</option>
-                  <option value="water">Water Supply</option>
-                  <option value="sanitation">Sanitation</option>
+                  ${Green.departmentOptionsHtml()}
                 </select>
                 <button class="btn btn-secondary btn-sm" id="bulk-apply-btn">Apply Bulk Actions</button>
               </div>
@@ -193,6 +187,10 @@ const DashboardPage = {
                         <th width="40"><input type="checkbox" id="select-all-issues"></th>
                         <th>ID</th>
                         <th>Title</th>
+                        <th>Ticket</th>
+                        <th>Office</th>
+                        <th>Days Open</th>
+                        <th>Reminders</th>
                         <th>Ward</th>
                         <th>Upvotes</th>
                         <th>Severity</th>
@@ -224,7 +222,7 @@ const DashboardPage = {
             <div class="panel-header-action">
               <div>
                 <h1 class="panel-title">AI Predictive Hotspot Analysis</h1>
-                <p class="text-muted">Proactively identify and manage high-risk civic sectors.</p>
+                <p class="text-muted">Predict where illegal dumping and waste burning will happen next.</p>
               </div>
               <button class="btn btn-primary" id="run-analysis-btn">
                 <i data-lucide="cpu"></i> Run Weekly AI Analysis
@@ -278,7 +276,7 @@ const DashboardPage = {
                   <div class="form-group half-width">
                     <label>Region</label>
                     <select id="report-city" class="form-control">
-                      <option value="MetroCity">MetroCity</option>
+                      <option value="Bengaluru">Bengaluru</option>
                     </select>
                   </div>
                 </div>
@@ -365,6 +363,7 @@ const DashboardPage = {
 
     // Database polling listener
     window.addEventListener('db-update', async () => {
+      if (!document.getElementById('m-total')) return; // dashboard not on screen
       await this.loadData();
       if (this.currentSubSection === 'overview') this.renderOverview();
       if (this.currentSubSection === 'issues') this.renderIssuesLog();
@@ -397,7 +396,7 @@ const DashboardPage = {
           <tr>
             <td><strong>${i.id}</strong></td>
             <td>${i.title}</td>
-            <td><span class="category-tag">${i.category}</span></td>
+            <td><span class="category-tag">${Green.label(i.category)}</span></td>
             <td><span class="severity-badge severity-${i.severity}">Sev ${i.severity}</span></td>
             <td><strong>${i.upvote_count}</strong></td>
             <td><button class="btn btn-secondary btn-xs" onclick="DashboardPage.openSpecificIssue('${i.id}')">Manage</button></td>
@@ -421,11 +420,11 @@ const DashboardPage = {
     const trendCtx = document.getElementById('trend-chart').getContext('2d');
 
     // Aggregate category data
-    const categories = ['pothole', 'streetlight', 'water_leakage', 'garbage', 'flooding', 'road_damage'];
+    const categories = Object.keys(Green.CATEGORIES);
     const categoryCounts = categories.map(cat => issuesList.filter(i => i.category === cat).length);
 
     // Aggregate department data (pie)
-    const departments = ['roads', 'electricity', 'water', 'sanitation', 'municipality'];
+    const departments = Object.keys(Green.DEPARTMENTS);
     const deptCounts = departments.map(dept => issuesList.filter(i => i.department === dept).length);
 
     // Dynamic submissions trends
@@ -446,7 +445,7 @@ const DashboardPage = {
     this.charts.category = new Chart(categoryCtx, {
       type: 'bar',
       data: {
-        labels: categories.map(c => c.toUpperCase().replace('_', ' ')),
+        labels: categories.map(c => Green.label(c)),
         datasets: [{
           label: 'Issues Submitted',
           data: categoryCounts,
@@ -465,7 +464,7 @@ const DashboardPage = {
     this.charts.dept = new Chart(deptCtx, {
       type: 'pie',
       data: {
-        labels: departments.map(d => d.toUpperCase()),
+        labels: departments.map(d => Green.DEPARTMENTS[d]),
         datasets: [{
           data: deptCounts,
           backgroundColor: ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6']
@@ -532,19 +531,23 @@ const DashboardPage = {
     if (wardFilter !== 'all') filtered = filtered.filter(i => i.ward === wardFilter);
 
     if (filtered.length === 0) {
-      tableBody.innerHTML = '<tr><td colspan="7" class="text-center">No issues matching filters.</td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="11" class="text-center">No issues matching filters.</td></tr>';
       return;
     }
 
     tableBody.innerHTML = filtered.map(i => `
-      <tr onclick="DashboardPage.openDetailsPane('${i.id}')" class="row-clickable ${this.selectedIssueId === i.id ? 'row-active' : ''}">
+      <tr onclick="DashboardPage.openDetailsPane('${i.id}')" class="row-clickable ${this.selectedIssueId === i.id ? 'row-active' : ''} ${Green.isOverdue(i) ? 'overdue-row' : ''}">
         <td onclick="event.stopPropagation()"><input type="checkbox" class="issue-row-checkbox" value="${i.id}" onchange="DashboardPage.updateSelectedCheckboxes()"></td>
         <td><strong>${i.id}</strong></td>
         <td>${i.title}</td>
+        <td>${i.complaint ? `<span class="ticket-chip">${i.complaint.ticket_id}</span>` : '—'}</td>
+        <td>${i.complaint ? (i.complaint.office_name || '').replace('BBMP ', '').replace(' Office', '') : '—'}</td>
+        <td>${Green.daysOpen(i)}</td>
+        <td>${i.complaint ? (i.complaint.reminder_count || 0) : '—'}</td>
         <td>${i.ward}</td>
         <td>${i.upvote_count}</td>
         <td><span class="severity-badge severity-${i.severity}">Level ${i.severity}</span></td>
-        <td><span class="status-pill status-${i.status}">${i.status}</span></td>
+        <td><span class="status-pill status-${i.status}">${Green.statusLabel(i.status)}</span></td>
       </tr>
     `).join('');
 
@@ -651,9 +654,16 @@ const DashboardPage = {
       <div class="thumbnail-item mb-3" style="width:100%; height:180px;"><img src="${issue.media_urls[0]}" style="border-radius:8px;"></div>
       
       <div class="pane-meta">
-        <span class="status-pill status-${issue.status}">${issue.status}</span>
+        <span class="status-pill status-${issue.status}">${Green.statusLabel(issue.status)}</span>
         <span class="severity-badge severity-${issue.severity}">Level ${issue.severity}</span>
       </div>
+      ${issue.complaint ? `
+      <div class="green-note mt-2 small">
+        <span class="ticket-chip">${issue.complaint.ticket_id}</span>
+        ${issue.complaint.email_status === 'sent' ? '📧 Emailed' : 'In-app only'} · ${issue.complaint.office_name || ''}<br>
+        Days open: ${Green.daysOpen(issue)} · Reminders: ${issue.complaint.reminder_count || 0} · Replies: ${issue.complaint.replies || 0}
+        ${Green.isOverdue(issue) ? '<br><strong style="color:#E11D48;">Overdue</strong>' : ''}
+      </div>` : ''}
 
       <h4 class="mt-2 mb-1">${issue.title}</h4>
       <p class="text-muted small">${issue.address}</p>
@@ -666,7 +676,7 @@ const DashboardPage = {
         <div class="form-group">
           <label>Assign Officer / Field Crew</label>
           <select id="dash-assign-crew" class="form-control">
-            <option value="officer_1" ${issue.assigned_to === 'officer_1' ? 'selected' : ''}>Officer Rajesh Kumar (Roads)</option>
+            <option value="officer_1" ${issue.assigned_to === 'officer_1' ? 'selected' : ''}>Officer Ramesh Kumar (SWM)</option>
             <option value="officer_2" ${issue.assigned_to === 'officer_2' ? 'selected' : ''}>Officer Priya Menon (Sanitation)</option>
             <option value="worker_ramesh">Ramesh Pal (Field Crew)</option>
             <option value="worker_sunil">Sunil Gowda (Field Crew)</option>
@@ -679,7 +689,7 @@ const DashboardPage = {
             <option value="open" ${issue.status === 'open' ? 'selected' : ''}>Open</option>
             <option value="in_progress" ${issue.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
             <option value="rejected" ${issue.status === 'rejected' ? 'selected' : ''}>Rejected</option>
-            <option value="resolved" ${issue.status === 'resolved' ? 'selected' : ''}>Resolved</option>
+            <option value="resolved" ${issue.status === 'resolved' ? 'selected' : ''}>Closed</option>
           </select>
         </div>
 
@@ -690,8 +700,8 @@ const DashboardPage = {
 
         <!-- Resolved Upload Box Gated -->
         <div id="resolve-upload-gated" class="resolve-gated-box mt-3 mb-3" style="display:${issue.status === 'resolved' ? 'none' : 'none'};">
-          <label><strong>Upload After-Fix Image Verification</strong></label>
-          <p class="text-muted small">AI will compare before and after photos to confirm the issue resolution.</p>
+          <label><strong>Upload Cleanup Photo Verification</strong></label>
+          <p class="text-muted small">Gemini AI will compare before and after photos to confirm the spot is clean.</p>
           <label class="btn btn-outline file-upload-label mt-1">
             <i data-lucide="camera"></i> Select After-Fix Photo
             <input type="file" id="after-fix-input" accept="image/*" style="display:none;">
@@ -700,7 +710,7 @@ const DashboardPage = {
         </div>
 
         <div id="ai-verifying-loader" class="voice-loader mt-2" style="display: none;">
-          <span class="spinner-sm"></span> Google AI Studio validating resolution comparison...
+          <span class="spinner-sm"></span> Gemini validating cleanup comparison...
         </div>
 
         <button type="submit" class="btn btn-primary btn-block mt-3">Apply Changes</button>
@@ -747,7 +757,7 @@ const DashboardPage = {
 
       // Check if trying to resolve without uploading photo
       if (status === 'resolved' && !this.afterFixPhoto && !issue.after_photo_url) {
-        App.showToast('Verification Required', 'Please upload an after-fix photo to verify resolution.', 'warning');
+        App.showToast('Verification Required', 'Please upload a cleanup photo before closing.', 'warning');
         return;
       }
 
@@ -816,7 +826,7 @@ const DashboardPage = {
         actor_id: officer.id,
         actor_role: officer.role,
         action: status === 'resolved' ? 'resolved' : 'status_changed',
-        note: note || `Status updated to ${status.toUpperCase()} by Authority Officer. Assigned to: ${crew}`,
+        note: note || `Status updated to ${Green.statusLabel(status).toUpperCase()} by Authority Officer. Assigned to: ${crew}`,
         created_at: new Date().toISOString()
       });
 
@@ -849,8 +859,8 @@ const DashboardPage = {
           }
 
           App.addNotification(
-            'Issue Resolved!',
-            `The issue "${issue.title.substring(0, 20)}..." you reported has been resolved. (+100 points)`,
+            'Complaint Closed!',
+            `The issue "${issue.title.substring(0, 20)}..." you reported has been cleaned up and closed. (+100 points)`,
             'success',
             issue.id
           );
@@ -908,9 +918,9 @@ const DashboardPage = {
       <tr>
         <td><strong>${p.id}</strong></td>
         <td><span class="severity-badge" style="background:rgba(249,115,22,0.15); color:#F97316;">${p.risk_score}% Risk</span></td>
-        <td><span class="category-tag">${p.predicted_category}</span></td>
+        <td><span class="category-tag">${Green.label(p.predicted_category)}</span></td>
         <td>${p.historical_count} recurrences</td>
-        <td>${p.generated_by_ai ? 'Gemma 4 AI' : 'Historical Stats'}</td>
+        <td>${p.generated_by_ai ? 'Gemini AI' : 'Historical Stats'}</td>
         <td>${new Date(p.expires_at).toLocaleDateString()}</td>
       </tr>
     `).join('');
@@ -949,7 +959,7 @@ const DashboardPage = {
 
         const tooltipText = `
           <div style="color:#0f172a; padding:6px; font-family:sans-serif;">
-            <strong>AI Hotspot: ${pred.predicted_category.toUpperCase()}</strong>
+            <strong>AI Hotspot: ${Green.label(pred.predicted_category)}</strong>
             <div>Risk: ${pred.risk_score}%</div>
             <div>Recurrences: ${pred.historical_count}</div>
           </div>
@@ -992,7 +1002,7 @@ const DashboardPage = {
         const coords = pred.zone_polygon.coordinates[0].map(coord => [coord[1], coord[0]]);
         const tooltipText = `
           <div style="color:#0f172a; padding:6px; font-family:sans-serif;">
-            <strong>AI Hotspot: ${pred.predicted_category.toUpperCase()}</strong>
+            <strong>AI Hotspot: ${Green.label(pred.predicted_category)}</strong>
             <div>Risk: ${pred.risk_score}%</div>
             <div>Recurrences: ${pred.historical_count}</div>
           </div>
@@ -1019,7 +1029,7 @@ const DashboardPage = {
   },
 
   async runWeeklyAI() {
-    App.showToast('Running Analysis...', 'Feeding 90 days data to Gemma 4...', 'info');
+    App.showToast('Running Analysis...', 'Feeding 90 days data to Gemini...', 'info');
     
     try {
       const newPredictions = await AI.runWeeklyAnalysis(this.issues);
@@ -1042,7 +1052,7 @@ const DashboardPage = {
         await DB.put('hotspot_predictions', predObj);
       }
 
-      App.showToast('Analysis Completed', '2 new hotspots predicted by Gemma 4.', 'success');
+      App.showToast('Analysis Completed', `${newPredictions.length} new hotspots predicted by Gemini.`, 'success');
       await this.loadData();
       this.renderPredictionsTable();
       this.renderPredictionsMap();
@@ -1088,7 +1098,7 @@ const DashboardPage = {
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(22);
     doc.setTextColor(26, 86, 219); // Brand Deep Civic Blue
-    doc.text("CIVICFIX METROPOLITAN REPORT", 20, 25);
+    doc.text("CIVICFIX GREEN BENGALURU REPORT", 20, 25);
     
     doc.setDrawColor(26, 86, 219);
     doc.setLineWidth(1);
@@ -1100,8 +1110,8 @@ const DashboardPage = {
 
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(11);
-    doc.text("This report summarizes local civic issue submissions and resolution timelines", 20, 48);
-    doc.text("conducted by the MetroCity municipal operations board.", 20, 53);
+    doc.text("This report summarizes waste-dump complaints, cleanups and resolution times", 20, 48);
+    doc.text("handled by BBMP offices across Bengaluru.", 20, 53);
 
     // Operational Table Summary
     doc.setFillColor(241, 245, 249);
@@ -1110,8 +1120,8 @@ const DashboardPage = {
     doc.setFont("Helvetica", "bold");
     doc.text("METRICS STATS SUMMARY", 25, 75);
     doc.setFont("Helvetica", "normal");
-    doc.text(`Total Reported Issues: ${total}`, 25, 83);
-    doc.text(`Total Resolved Issues: ${resolved}`, 25, 90);
+    doc.text(`Total Complaints: ${total}`, 25, 83);
+    doc.text(`Total Closed (Verified Clean): ${resolved}`, 25, 90);
     doc.text(`Active Open Tickets: ${open}`, 25, 97);
     doc.text(`Average Resolution SLA: 26.4 Hours`, 25, 104);
 
@@ -1119,14 +1129,15 @@ const DashboardPage = {
     doc.setFont("Helvetica", "bold");
     doc.text("DEPARTMENT OUTCOMES SUMMARY", 20, 125);
     doc.setFont("Helvetica", "normal");
-    doc.text("- Roads Dept: 84% Resolution Compliance (Target: 80%)", 20, 135);
-    doc.text("- Electricity Board: 91% Resolution Compliance (Target: 90%)", 20, 142);
-    doc.text("- Water Supply & Sewerage: 78% Resolution Compliance (Target: 80%)", 20, 149);
-    doc.text("- Sanitation & Waste: 89% Resolution Compliance (Target: 85%)", 20, 156);
+    Object.keys(Green.DEPARTMENTS).forEach((d, idx) => {
+      const deptIssues = this.issues.filter(i => (i.department || Green.departmentFor(i.category)) === d);
+      const deptClosed = deptIssues.filter(i => i.status === 'resolved').length;
+      doc.text(`- ${Green.DEPARTMENTS[d]}: ${deptClosed}/${deptIssues.length} closed`, 20, 135 + idx * 7);
+    });
 
     // Signature Block
     doc.setFontSize(10);
-    doc.text("Approved by: Operations Director, MetroCity Municipal Board", 20, 200);
+    doc.text("Prepared for: BBMP Solid Waste Management, Bengaluru", 20, 200);
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 207);
 
     // Save report configuration to IndexedDB
@@ -1135,18 +1146,15 @@ const DashboardPage = {
       id: `report_${month}_2026`,
       month: month,
       year: 2026,
-      city: 'MetroCity',
+      city: 'Bengaluru',
       total_reported: total,
       total_resolved: resolved,
       avg_resolution_hours: 26.4,
-      department_breakdown: {
-        roads: { reported: 15, resolved: 12 },
-        sanitation: { reported: 8, resolved: 8 }
-      },
-      category_breakdown: {
-        pothole: 10,
-        garbage: 8
-      },
+      department_breakdown: Object.fromEntries(Object.keys(Green.DEPARTMENTS).map(d => {
+        const deptIssues = this.issues.filter(i => (i.department || Green.departmentFor(i.category)) === d);
+        return [d, { reported: deptIssues.length, resolved: deptIssues.filter(i => i.status === 'resolved').length }];
+      })),
+      category_breakdown: Object.fromEntries(Object.keys(Green.CATEGORIES).map(c => [c, this.issues.filter(i => i.category === c).length])),
       is_public: isPublic,
       pdf_url: `report_${month}_2026.pdf`,
       generated_at: new Date().toISOString()

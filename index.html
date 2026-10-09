@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CivicFix | AI-Powered Community Issue Reporting & Resolution</title>
+  <title>CivicFix Green | Report Garbage Dumps to BBMP</title>
   
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
@@ -40,7 +40,7 @@
           <circle cx="256" cy="240" r="100" fill="#FFFFFF" />
           <path d="M208,248 L238,278 L304,200" fill="none" stroke="#1A56DB" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
-        <span class="logo-text">CivicFix<span class="logo-badge">AI</span></span>
+        <span class="logo-text">CivicFix<span class="logo-badge">Green</span></span>
       </div>
 
       <nav class="desktop-nav-links">
@@ -48,7 +48,7 @@
         <a href="#/map" class="nav-link"><i data-lucide="map"></i> Interactive Map</a>
         <a href="#/public" class="nav-link"><i data-lucide="bar-chart-2"></i> City Board</a>
         <a href="#/leaderboard" class="nav-link"><i data-lucide="trophy"></i> Leaderboard</a>
-        <a href="#/report" class="nav-link"><i data-lucide="plus-circle"></i> Report Issue</a>
+        <a href="#/report" class="nav-link"><i data-lucide="plus-circle"></i> Report Dump</a>
         <a href="#/profile" class="nav-link"><i data-lucide="user"></i> Profile</a>
       </nav>
 
@@ -80,7 +80,7 @@
           <circle cx="256" cy="240" r="100" fill="#FFFFFF" />
           <path d="M208,248 L238,278 L304,200" fill="none" stroke="#1A56DB" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
-        <span class="logo-text">CivicFix</span>
+        <span class="logo-text">CivicFix Green</span>
       </div>
       <div class="mobile-actions" style="display: flex; align-items: center; gap: 10px;">
         <button class="icon-btn" id="theme-toggle-mobile" title="Toggle Theme">
@@ -139,22 +139,7 @@
   <!-- Toast alerts container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- Map Engine Initialization (High-performance Leaflet primary, Google Maps optional) -->
-  <script>
-    window.googleMapsFailed = false;
-    window.gm_authFailure = function() {
-      console.warn("Google Maps authorization or key validation failed. Switching to Leaflet map fallback.");
-      window.googleMapsFailed = true;
-      window.dispatchEvent(new CustomEvent('google-maps-failed'));
-    };
-    // Dynamically load Google Maps only if a custom valid key is set in CONFIG
-    if (window.CONFIG && window.CONFIG.GOOGLE_MAPS_KEY && !window.CONFIG.GOOGLE_MAPS_KEY.startsWith('YOUR_') && window.CONFIG.GOOGLE_MAPS_KEY !== 'REDACTED_GOOGLE_API_KEY') {
-      const gScript = document.createElement('script');
-      gScript.src = `https://maps.googleapis.com/maps/api/js?key=${window.CONFIG.GOOGLE_MAPS_KEY}&libraries=visualization`;
-      gScript.async = true;
-      document.head.appendChild(gScript);
-    }
-  </script>
+  <script>window.googleMapsFailed = true;</script>
 
   <!-- Leaflet JS Fallbacks -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -168,28 +153,31 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
+  <!-- EXIF GPS reader for uploaded photos -->
+  <script src="https://cdn.jsdelivr.net/npm/exifr@7/dist/lite.umd.js"></script>
+
   <!-- APPLICATION CODE FILES -->
-  <script src="js/config.js?v=9"></script>
-  <script src="js/db.js?v=9"></script>
-  <script src="js/services/govtData.js?v=9"></script>
-  <script src="js/auth.js?v=9"></script>
-  <script src="js/ai.js?v=9"></script>
-  <script src="js/router.js?v=9"></script>
-  
+  <script src="js/config.js?v=10"></script>
+  <script src="js/categories.js?v=10"></script>
+  <script src="js/db.js?v=10"></script>
+  <script src="js/auth.js?v=10"></script>
+  <script src="js/ai.js?v=10"></script>
+  <script src="js/router.js?v=10"></script>
+
   <!-- ROUTE CONTROLLERS -->
-  <script src="js/pages/splash.js?v=9"></script>
-  <script src="js/pages/login.js?v=9"></script>
-  <script src="js/pages/signup.js?v=9"></script>
-  <script src="js/pages/home.js?v=9"></script>
-  <script src="js/pages/report.js?v=9"></script>
-  <script src="js/pages/map.js?v=9"></script>
-  <script src="js/pages/leaderboard.js?v=9"></script>
-  <script src="js/pages/profile.js?v=9"></script>
-  <script src="js/pages/dashboard.js?v=9"></script>
-  <script src="js/pages/admin.js?v=9"></script>
-  <script src="js/pages/public.js?v=9"></script>
-  
+  <script src="js/pages/splash.js?v=10"></script>
+  <script src="js/pages/login.js?v=10"></script>
+  <script src="js/pages/signup.js?v=10"></script>
+  <script src="js/pages/home.js?v=10"></script>
+  <script src="js/pages/report.js?v=10"></script>
+  <script src="js/pages/map.js?v=10"></script>
+  <script src="js/pages/leaderboard.js?v=10"></script>
+  <script src="js/pages/profile.js?v=10"></script>
+  <script src="js/pages/dashboard.js?v=10"></script>
+  <script src="js/pages/admin.js?v=10"></script>
+  <script src="js/pages/public.js?v=10"></script>
+
   <!-- COORDINATOR ENTRYPOINT -->
-  <script src="js/app.js?v=9"></script>
+  <script src="js/app.js?v=10"></script>
 </body>
 </html>

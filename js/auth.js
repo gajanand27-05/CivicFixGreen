@@ -82,7 +82,7 @@ const Auth = {
         email,
         password_hash: 'google_oauth_bypass',
         role: accountData?.role || 'citizen',
-        city: 'MetroCity',
+        city: 'Bengaluru',
         ward: 'Ward 4',
         points: defaultPoints,
         google_oauth_id: 'g_' + Math.random().toString(36).substring(2, 11),

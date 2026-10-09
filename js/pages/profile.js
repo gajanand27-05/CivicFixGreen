@@ -36,11 +36,11 @@ const ProfilePage = {
             </div>
             <div class="stat-card">
               <div class="stat-num color-danger" id="stat-reports-count">0</div>
-              <div class="stat-label">Reports Submitted</div>
+              <div class="stat-label">Dumps Reported</div>
             </div>
             <div class="stat-card">
               <div class="stat-num color-success" id="stat-resolved-count">0</div>
-              <div class="stat-label">Resolved Issues</div>
+              <div class="stat-label">Complaints Closed</div>
             </div>
           </div>
         </div>
@@ -48,7 +48,7 @@ const ProfilePage = {
         <!-- Badges Earned Section -->
         <div class="badges-grid-card card mt-4">
           <h3>Your Badges</h3>
-          <p class="text-muted mb-4">Badges are awarded automatically for active civic participation.</p>
+          <p class="text-muted mb-4">Badges are awarded automatically for helping keep Bengaluru clean.</p>
           <div class="badges-grid" id="profile-badges-grid">
             <!-- Populated dynamically -->
           </div>
@@ -72,7 +72,7 @@ const ProfilePage = {
                 <div class="form-group half-width">
                   <label for="edit-city">City</label>
                   <select id="edit-city" class="form-control">
-                    <option value="MetroCity" selected>MetroCity</option>
+                    <option value="Bengaluru" selected>Bengaluru</option>
                   </select>
                 </div>
                 <div class="form-group half-width">
@@ -104,7 +104,7 @@ const ProfilePage = {
             <div class="preference-item">
               <div class="pref-desc">
                 <strong>Email Notifications</strong>
-                <p>Receive emails for report confirmations and resolutions.</p>
+                <p>Receive emails when your complaint is sent, reminded and closed.</p>
               </div>
               <label class="switch">
                 <input type="checkbox" id="pref-email-notif" ${user.notification_preferences?.email ? 'checked' : ''}>
@@ -121,14 +121,6 @@ const ProfilePage = {
                 <input type="checkbox" id="pref-push-notif" ${user.notification_preferences?.push ? 'checked' : ''}>
                 <span class="slider"></span>
               </label>
-            </div>
-
-            <div class="preference-item" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 15px; margin-top: 15px; display: block;">
-              <div class="pref-desc" style="margin-bottom: 10px;">
-                <strong>Google AI Studio API Key</strong>
-                <p class="text-muted" style="font-size: 13px; margin-top: 4px;">Enter your Gemini API key to enable real-time image detection and voice transcription. Keys are saved locally in your browser.</p>
-              </div>
-              <input type="password" id="pref-ai-key" class="form-control" placeholder="Enter API Key (AIzaSy...)" style="width: 100%; max-width: 450px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 10px; color: #fff;">
             </div>
 
             <button class="btn btn-primary mt-3" id="save-preferences-btn">Save Preferences</button>
@@ -212,12 +204,6 @@ const ProfilePage = {
       Router.updateNavigationLayout(window.location.hash, Auth.getCurrentUser());
     });
 
-    // Load preferences
-    const aiKeyField = document.getElementById('pref-ai-key');
-    if (aiKeyField) {
-      aiKeyField.value = localStorage.getItem('civicfix_ai_studio_key') || '';
-    }
-
     // Save preferences
     const savePrefBtn = document.getElementById('save-preferences-btn');
     savePrefBtn.addEventListener('click', async () => {
@@ -225,9 +211,6 @@ const ProfilePage = {
         email: document.getElementById('pref-email-notif').checked,
         push: document.getElementById('pref-push-notif').checked
       };
-
-      const aiKeyVal = document.getElementById('pref-ai-key').value.trim();
-      localStorage.setItem('civicfix_ai_studio_key', aiKeyVal);
 
       await DB.put('users', user);
       await Auth.refreshUser();
@@ -270,17 +253,17 @@ const ProfilePage = {
 
     // Badges details catalog
     const badgeDetails = {
-      first_reporter: { title: 'First Reporter', desc: 'Submitted first issue report', icon: 'award', color: 'blue' },
-      watchdog: { title: 'Watchdog Officer', desc: 'Reported 10+ civic issues', icon: 'shield', color: 'amber' },
-      community_hero: { title: 'Community Hero', desc: 'Reported 50+ issues', icon: 'heart', color: 'red' },
-      verified_voice: { title: 'Verified Voice', desc: '3+ reports resolved by authorities', icon: 'check-circle', color: 'green' },
+      first_reporter: { title: 'First Reporter', desc: 'Reported first waste dump', icon: 'award', color: 'blue' },
+      watchdog: { title: 'Watchdog Officer', desc: 'Reported 10+ waste dumps', icon: 'shield', color: 'amber' },
+      community_hero: { title: 'Community Hero', desc: 'Reported 50+ waste dumps', icon: 'heart', color: 'red' },
+      verified_voice: { title: 'Verified Voice', desc: '3+ complaints closed by BBMP', icon: 'check-circle', color: 'green' },
       streak_master: { title: 'Streak Master', desc: 'Reported weekly for 4 weeks', icon: 'zap', color: 'indigo' },
       top_contributor: { title: 'Top Contributor', desc: 'Ranked in monthly top 10', icon: 'crown', color: 'gold' }
     };
 
     const badgesContainer = document.getElementById('profile-badges-grid');
     if (myBadges.length === 0) {
-      badgesContainer.innerHTML = '<div class="empty-badges">No badges earned yet. Start reporting to earn badges!</div>';
+      badgesContainer.innerHTML = '<div class="empty-badges">No badges earned yet. Report a garbage dump to earn your first badge!</div>';
       return;
     }
 

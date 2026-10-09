@@ -1,7 +1,7 @@
 {
-  "name": "CivicFix",
-  "short_name": "CivicFix",
-  "description": "Community-driven civic issue reporting and resolution platform.",
+  "name": "CivicFix Green",
+  "short_name": "CivicFix Green",
+  "description": "Report garbage dumps to BBMP by email and track them until they are cleaned.",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
