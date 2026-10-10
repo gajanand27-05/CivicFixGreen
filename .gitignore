@@ -12,7 +12,8 @@ server/*.db
 .venv/
 __pycache__/
 .pytest_cache/
-.vercel
 
+# secrets: never commit real keys (templates stay tracked)
 .vercel
 .env*
+!.env.example
