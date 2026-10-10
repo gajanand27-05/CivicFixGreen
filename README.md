@@ -13,6 +13,10 @@
   <b>AI PROMPTVERSE 2026 · AI for Sustainability</b> · Team <b>SG-FORGE</b>
 </p>
 
+<p align="center">
+  🌐 <b>Live demo:</b> <a href="https://ecosort-phi.vercel.app">ecosort-phi.vercel.app</a>
+</p>
+
 ---
 
 ## The problem
@@ -115,6 +119,7 @@ Don't use `--reload`: it starts the background monitor twice.
 **Phone demo:** camera and GPS need HTTPS. Run `ngrok http 8000`, open the https link on the phone, and set `PUBLIC_BASE_URL` in `.env` to that link.
 
 ### Deploy on Vercel
+Live at **https://ecosort-phi.vercel.app**.
 `api/index.py` exposes the FastAPI app, and `vercel.json` sets up a daily cron on `/api/cron/tick` for checking replies and sending reminders.
 Set the same variables as in `.env` in the Vercel project. Add `DATABASE_URL` (or `POSTGRES_URL`) for persistent storage; without it, data lives in `/tmp` and is lost. Optionally set `CRON_SECRET` to protect the cron endpoint.
 
